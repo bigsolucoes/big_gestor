@@ -16,10 +16,18 @@ const AIAssistantPage: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: "smooth", 
+        block: "end" 
+      });
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   };
+
 
   useEffect(scrollToBottom, [messages]);
   
@@ -111,19 +119,26 @@ const AIAssistantPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-card-bg shadow-xl rounded-xl overflow-hidden border border-border-color">
+    <div className="flex flex-col h-full max-h-[calc(100vh-200px)] bg-card-bg shadow-xl rounded-xl overflow-hidden border border-border-color">
       <header className="p-4 border-b border-border-color bg-subtle-bg">
         <h1 className="text-xl font-semibold text-text-primary flex items-center">
           <SparklesIcon size={22} /> <span className="ml-2">Assistente AI</span>
         </h1>
       </header>
 
-      <div className="flex-grow p-4 overflow-y-auto space-y-2">
+      <div 
+        ref={messagesContainerRef} 
+        className="flex-grow p-4 overflow-y-auto space-y-2"
+      >
         {messages.map(msg => (
           <AIChatMessageComponent key={msg.id} message={msg} />
         ))}
         <div ref={messagesEndRef} />
-        {isLoading && <div className="flex justify-center py-2"><LoadingSpinner size="sm" /></div>}
+        {isLoading && (
+          <div className="flex justify-center py-2">
+            <LoadingSpinner size="sm" />
+          </div>
+        )}
       </div>
 
       <div className="p-2 border-t border-border-color bg-subtle-bg">
