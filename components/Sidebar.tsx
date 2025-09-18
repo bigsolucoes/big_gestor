@@ -17,8 +17,10 @@ const Sidebar: React.FC = () => {
   const googlePhotosUrl = 'https://photos.google.com';
 
   return (
-    <div className={`w-64 p-4 hidden md:flex md:flex-col space-y-2 h-full shadow-2xl 
-                    bg-subtle-bg text-text-primary border-r border-border-color`}>
+<div className={`w-64 p-4 hidden md:flex md:flex-col space-y-2 h-[100vh] shadow-2xl 
+                bg-subtle-bg text-text-primary border-r border-border-color overflow-y-auto
+                hide-scrollbar
+                `}>
       <nav className="flex-grow mt-4"> 
         <ul>
           {(NAVIGATION_ITEMS as NavigationItem[]).map((item) => {
@@ -49,7 +51,7 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* External Links Section */}
-      <div className="mt-4 pt-4 border-t border-border-color space-y-2">
+      <div className="mt-4 py-4 border-t border-border-color space-y-2">
         <a
           href={asaasUrl}
           target="_blank"

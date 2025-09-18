@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from 'react';
 import { Job, Client, AppSettings, DraftNote, JobStatus, User, ServiceType, Contract } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
@@ -214,73 +214,109 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const saveData = useCallback(async <T extends unknown>(key: string, data: T, userId?: string) => {
     const targetUserId = userId || currentUser?.id;
-    if (!loading && targetUserId) {
-        await blobService.set(targetUserId, key, data);
+    if (!loading && targetUserId && data) {
+        console.log(`Saving ${key} for user ${targetUserId}`);
+        try {
+            await blobService.set(targetUserId, key, data);
+        } catch (error) {
+            console.error(`Error saving ${key} data:`, error);
+            toast.error(`Failed to save ${key}. Please try again.`);
+        }
     }
   }, [currentUser, loading]);
 
-  useEffect(() => { 
-      if (currentUser) {
-          const userJobs = jobs.filter(j => j.ownerId === currentUser.id);
-          saveData('jobs', userJobs); 
-      }
-  }, [jobs, saveData, currentUser]);
-  useEffect(() => { saveData('clients', clients); }, [clients, saveData]);
-  useEffect(() => { saveData('contracts', contracts); }, [contracts, saveData]);
-  useEffect(() => { saveData('draftNotes', draftNotes); }, [draftNotes, saveData]);
-  useEffect(() => { saveData('settings', settings); }, [settings, saveData]);
+  // Remove all auto-save effects since we'll handle saves manually in each operation
 
 
- const addJob = useCallback((jobData: Omit<Job, 'id' | 'createdAt' | 'isDeleted' | 'observationsLog' | 'payments' | 'cloudLinks' | 'tasks' | 'linkedDraftIds' | 'ownerId' | 'ownerUsername' | 'linkedContractId'> & Partial<Pick<Job, 'cloudLinks' | 'cost' | 'isRecurring' | 'createCalendarEvent' | 'isTeamJob' | 'linkedContractId'>>) => {
+  const addJob = useCallback(async (jobData: Omit<Job, 'id' | 'createdAt' | 'isDeleted' | 'observationsLog' | 'payments' | 'cloudLinks' | 'tasks' | 'linkedDraftIds' | 'ownerId' | 'ownerUsername' | 'linkedContractId'> & Partial<Pick<Job, 'cloudLinks' | 'cost' | 'isRecurring' | 'createCalendarEvent' | 'isTeamJob' | 'linkedContractId'>>) => {
     if (!currentUser) return;
     const newJob: Job = {
         ...jobData,
-        id: uuidv4(), createdAt: new Date().toISOString(), isDeleted: false, observationsLog: [], payments: [], cloudLinks: jobData.cloudLinks || [], isRecurring: jobData.isRecurring || false, tasks: [], linkedDraftIds: [],
+        id: uuidv4(), 
+        createdAt: new Date().toISOString(), 
+        isDeleted: false, 
+        observationsLog: [], 
+        payments: [], 
+        cloudLinks: jobData.cloudLinks || [], 
+        isRecurring: jobData.isRecurring || false, 
+        tasks: [], 
+        linkedDraftIds: [],
         ownerId: currentUser.id,
         ownerUsername: currentUser.username,
         isTeamJob: jobData.isTeamJob || false,
     };
-    setJobs(prev => [...prev, newJob]);
-  }, [currentUser]);
+    const newJobs = [...jobs, newJob];
+    const userJobs = newJobs.filter(j => j.ownerId === currentUser.id);
+    await saveData('jobs', userJobs);
+    setJobs(newJobs);
+  }, [currentUser, saveData, jobs]);
 
-  const updateJob = useCallback((updatedJob: Job) => {
-    setJobs(prevJobs => {
-        const previousJob = prevJobs.find(j => j.id === updatedJob.id);
+  const updateJob = useCallback(async (updatedJob: Job) => {
+    if (!currentUser) return;
+    let newJobs = jobs.map(job => job.id === updatedJob.id ? updatedJob : job);
+    
+    const previousJob = jobs.find(j => j.id === updatedJob.id);
+    if (previousJob && previousJob.status !== JobStatus.PAID && updatedJob.status === JobStatus.PAID && updatedJob.isRecurring) {
+      const deadlineDate = new Date(updatedJob.deadline);
+      deadlineDate.setMonth(deadlineDate.getMonth() + 1);
 
-        if (previousJob && previousJob.status !== JobStatus.PAID && updatedJob.status === JobStatus.PAID && updatedJob.isRecurring) {
-            const deadlineDate = new Date(updatedJob.deadline);
-            deadlineDate.setMonth(deadlineDate.getMonth() + 1);
+      const newRecurringJob: Job = {
+          ...updatedJob,
+          id: uuidv4(),
+          createdAt: new Date().toISOString(),
+          deadline: deadlineDate.toISOString(),
+          status: JobStatus.BRIEFING, 
+          payments: [],
+          observationsLog: [],
+          tasks: [],
+          linkedDraftIds: [],
+          name: `${updatedJob.name.replace(/ \(Mês Seguinte\)$/i, '')}`,
+      };
 
-            const newRecurringJob: Job = {
-                ...updatedJob,
-                id: uuidv4(),
-                createdAt: new Date().toISOString(),
-                deadline: deadlineDate.toISOString(),
-                status: JobStatus.BRIEFING, 
-                payments: [],
-                observationsLog: [],
-                tasks: [],
-                linkedDraftIds: [],
-                name: `${updatedJob.name.replace(/ \(Mês Seguinte\)$/i, '')}`,
-            };
+      toast.success(`Job recorrente "${newRecurringJob.name}" criado para o próximo mês.`);
+      newJobs = [...newJobs, newRecurringJob];
+    }
+    
+    const userJobs = newJobs.filter(j => j.ownerId === currentUser.id);
+    await saveData('jobs', userJobs);
+    setJobs(newJobs);
+  }, [currentUser, saveData, jobs]);
 
-            toast.success(`Job recorrente "${newRecurringJob.name}" criado para o próximo mês.`);
-            
-            return [...prevJobs.map(job => job.id === updatedJob.id ? updatedJob : job), newRecurringJob];
-        } else {
-            return prevJobs.map(job => job.id === updatedJob.id ? updatedJob : job);
-        }
-    });
-  }, []);
+  const deleteJob = useCallback(async (jobId: string) => { 
+    if (!currentUser) return;
+    const newJobs = jobs.map(job => job.id === jobId ? { ...job, isDeleted: true } : job);
+    const userJobs = newJobs.filter(j => j.ownerId === currentUser.id);
+    await saveData('jobs', userJobs);
+    setJobs(newJobs);
+  }, [currentUser, saveData, jobs]);
 
-
-  const deleteJob = useCallback((jobId: string) => { setJobs(prev => prev.map(job => job.id === jobId ? { ...job, isDeleted: true } : job)); }, []);
-  const permanentlyDeleteJob = useCallback((jobId: string) => { setJobs(prev => prev.filter(job => job.id !== jobId)); }, []);
-  const getJobById = useCallback((jobId: string) => jobs.find(job => job.id === jobId), [jobs]);
-  const addClient = useCallback((clientData: Omit<Client, 'id' | 'createdAt'>) => { setClients(prev => [...prev, { ...clientData, id: uuidv4(), createdAt: new Date().toISOString() }]); }, []);
-  const updateClient = useCallback((updatedClient: Client) => { setClients(prev => prev.map(client => client.id === updatedClient.id ? updatedClient : client)); }, []);
+  const permanentlyDeleteJob = useCallback(async (jobId: string) => { 
+    if (!currentUser) return;
+    const newJobs = jobs.filter(job => job.id !== jobId);
+    const userJobs = newJobs.filter(j => j.ownerId === currentUser.id);
+    await saveData('jobs', userJobs);
+    setJobs(newJobs);
+  }, [currentUser, saveData, jobs]);
   
-  const deleteClient = useCallback((clientId: string) => {
+  const getJobById = useCallback((jobId: string) => jobs.find(job => job.id === jobId), [jobs]);
+  
+  const addClient = useCallback(async (clientData: Omit<Client, 'id' | 'createdAt'>) => { 
+    if (!currentUser) return;
+    const newClient = { ...clientData, id: uuidv4(), createdAt: new Date().toISOString() };
+    const newClients = [...clients, newClient];
+    await saveData('clients', newClients);
+    setClients(newClients);
+  }, [currentUser, saveData, clients]);
+
+  const updateClient = useCallback(async (updatedClient: Client) => { 
+    if (!currentUser) return;
+    const newClients = clients.map(client => client.id === updatedClient.id ? updatedClient : client);
+    await saveData('clients', newClients);
+    setClients(newClients);
+  }, [currentUser, saveData, clients]);
+  
+  const deleteClient = useCallback(async (clientId: string) => {
+    if (!currentUser) return;
     const clientToDelete = clients.find(c => c.id === clientId);
     if (!clientToDelete) return;
 
@@ -296,22 +332,30 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
     confirmMessage += "\n\nEsta ação não pode ser desfeita.";
 
-
     if (window.confirm(confirmMessage)) {
       if (associatedContracts.length > 0) {
         const contractIdsToDelete = new Set(associatedContracts.map(c => c.id));
-        setContracts(prev => prev.filter(c => !contractIdsToDelete.has(c.id)));
-        setJobs(prev => prev.map(job => contractIdsToDelete.has(job.linkedContractId || '') ? { ...job, linkedContractId: undefined } : job));
+        const newContracts = contracts.filter(c => !contractIdsToDelete.has(c.id));
+        await saveData('contracts', newContracts);
+        setContracts(newContracts);
+
+        const newJobs = jobs.map(job => contractIdsToDelete.has(job.linkedContractId || '') ? { ...job, linkedContractId: undefined } : job);
+        const userJobs = newJobs.filter(j => j.ownerId === currentUser.id);
+        await saveData('jobs', userJobs);
+        setJobs(newJobs);
       }
-      setClients(prev => prev.filter(client => client.id !== clientId));
+
+      const newClients = clients.filter(client => client.id !== clientId);
+      await saveData('clients', newClients);
+      setClients(newClients);
+      
       toast.success('Cliente e contratos associados foram excluídos com sucesso!');
     }
-}, [clients, contracts, jobs]);
-
+  }, [currentUser, clients, contracts, jobs, saveData]);
 
   const getClientById = useCallback((clientId: string) => clients.find(client => client.id === clientId), [clients]);
   
-  const addContract = useCallback((contractData: Omit<Contract, 'id' | 'createdAt' | 'ownerId' | 'ownerUsername'>) => {
+  const addContract = useCallback(async (contractData: Omit<Contract, 'id' | 'createdAt' | 'ownerId' | 'ownerUsername'>) => {
     if (!currentUser) return;
     const newContract: Contract = {
         ...contractData,
@@ -320,52 +364,115 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
         ownerId: currentUser.id,
         ownerUsername: currentUser.username,
     };
-    setContracts(prev => [...prev, newContract]);
-}, [currentUser]);
+    const newContracts = [...contracts, newContract];
+    await saveData('contracts', newContracts);
+    setContracts(newContracts);
+  }, [currentUser, saveData, contracts]);
 
-  const updateContract = useCallback((updatedContract: Contract) => { setContracts(prev => prev.map(contract => contract.id === updatedContract.id ? updatedContract : contract)); }, []);
+  const updateContract = useCallback(async (updatedContract: Contract) => { 
+    if (!currentUser) return;
+    const newContracts = contracts.map(contract => contract.id === updatedContract.id ? updatedContract : contract);
+    await saveData('contracts', newContracts);
+    setContracts(newContracts);
+  }, [currentUser, saveData, contracts]);
   
-  const deleteContract = useCallback((contractId: string) => { 
-    setContracts(prev => prev.filter(contract => contract.id !== contractId));
-    setJobs(prev => prev.map(job => job.linkedContractId === contractId ? { ...job, linkedContractId: undefined } : job));
-  }, []);
+  const deleteContract = useCallback(async (contractId: string) => { 
+    if (!currentUser) return;
+    const newContracts = contracts.filter(contract => contract.id !== contractId);
+    await saveData('contracts', newContracts);
+    setContracts(newContracts);
+    
+    const newJobs = jobs.map(job => job.linkedContractId === contractId ? { ...job, linkedContractId: undefined } : job);
+    const userJobs = newJobs.filter(j => j.ownerId === currentUser.id);
+    await saveData('jobs', userJobs);
+    setJobs(newJobs);
+  }, [currentUser, saveData, contracts, jobs]);
   
-  const updateSettings = useCallback((newSettings: Partial<AppSettings>) => { setSettings(prev => ({ ...prev, ...newSettings })); }, []);
-  const addDraftNote = useCallback((draftData: { title: string, type: 'TEXT' | 'SCRIPT' }): DraftNote => {
-    const newDraft: DraftNote = { ...draftData, id: uuidv4(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), content: draftData.type === 'TEXT' ? '' : '', scriptLines: draftData.type === 'SCRIPT' ? [{ id: uuidv4(), scene: '1', description: '', duration: 0 }] : [], attachments: [], };
-    setDraftNotes(prev => [newDraft, ...prev]); return newDraft;
-  }, []);
-  const updateDraftNote = useCallback((updatedDraft: DraftNote) => { setDraftNotes(prev => prev.map(draft => draft.id === updatedDraft.id ? { ...updatedDraft, updatedAt: new Date().toISOString() } : draft)); }, []);
-  const deleteDraftNote = useCallback((draftId: string) => { setDraftNotes(prev => prev.filter(draft => draft.id !== draftId)); }, []);
+  const updateSettings = useCallback(async (newSettings: Partial<AppSettings>) => { 
+    if (!currentUser) return;
+    const updatedSettings = { ...settings, ...newSettings };
+    await saveData('settings', updatedSettings);
+    setSettings(updatedSettings);
+  }, [currentUser, saveData, settings]);
+  
+  const addDraftNote = useCallback(async (draftData: { title: string, type: 'TEXT' | 'SCRIPT' }): Promise<DraftNote> => {
+    if (!currentUser) throw new Error("User not authenticated.");
+    const newDraft: DraftNote = { 
+      ...draftData, 
+      id: uuidv4(), 
+      createdAt: new Date().toISOString(), 
+      updatedAt: new Date().toISOString(), 
+      content: draftData.type === 'TEXT' ? '' : '', 
+      scriptLines: draftData.type === 'SCRIPT' ? [{ id: uuidv4(), scene: '1', description: '', duration: 0 }] : [], 
+      attachments: [], 
+    };
+    const newDrafts = [newDraft, ...draftNotes];
+    await saveData('draftNotes', newDrafts);
+    setDraftNotes(newDrafts);
+    return newDraft;
+  }, [currentUser, saveData, draftNotes]);
 
-  const exportData = useCallback(() => {
+  const updateDraftNote = useCallback(async (updatedDraft: DraftNote) => { 
+    if (!currentUser) return;
+    const newDrafts = draftNotes.map(draft => 
+      draft.id === updatedDraft.id ? { ...updatedDraft, updatedAt: new Date().toISOString() } : draft
+    );
+    await saveData('draftNotes', newDrafts);
+    setDraftNotes(newDrafts);
+  }, [currentUser, saveData, draftNotes]);
+
+  const deleteDraftNote = useCallback(async (draftId: string) => { 
+    if (!currentUser) return;
+    const newDrafts = draftNotes.filter(draft => draft.id !== draftId);
+    await saveData('draftNotes', newDrafts);
+    setDraftNotes(newDrafts);
+  }, [currentUser, saveData, draftNotes]);
+
+  const exportData = useCallback(async () => {
     if (!currentUser) {
       toast.error("Você precisa estar logado para exportar dados.");
       return;
     }
-    const userJobsToExport = jobs.filter(j => j.ownerId === currentUser.id);
-    const userContractsToExport = contracts.filter(c => c.ownerId === currentUser.id);
 
-    const dataToExport = {
-      version: '2.5-contracts-owned', // Updated version
-      exportedAt: new Date().toISOString(),
-      data: {
-        jobs: userJobsToExport,
-        clients,
-        contracts: userContractsToExport,
-        draftNotes,
-        settings,
-      }
-    };
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(dataToExport, null, 2)
-    )}`;
-    const link = document.createElement("a");
-    link.href = jsonString;
-    link.download = `big_backup_${currentUser.username}_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    toast.success("Dados exportados com sucesso!");
-  }, [jobs, clients, contracts, draftNotes, settings, currentUser]);
+    try {
+      // Filter user-specific data
+      const userJobsToExport = jobs.filter(j => j.ownerId === currentUser.id);
+      const userContractsToExport = contracts.filter(c => c.ownerId === currentUser.id);
+
+      const dataToExport = {
+        version: '2.5-contracts-owned',
+        exportedAt: new Date().toISOString(),
+        data: {
+          jobs: userJobsToExport,
+          clients,
+          contracts: userContractsToExport,
+          draftNotes,
+          settings,
+        }
+      };
+
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(dataToExport, null, 2)
+      )}`;
+      
+      const link = document.createElement("a");
+      link.href = jsonString;
+      link.download = `big_backup_${currentUser.username}_${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      
+      // Ensure data is synced after export
+      await saveData('jobs', userJobsToExport);
+      await saveData('contracts', userContractsToExport);
+      await saveData('clients', clients);
+      await saveData('draftNotes', draftNotes);
+      await saveData('settings', settings);
+      
+      toast.success("Dados exportados com sucesso!");
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      toast.error("Erro ao exportar dados. Tente novamente.");
+    }
+  }, [jobs, clients, contracts, draftNotes, settings, currentUser, saveData]);
 
   const importData = useCallback(async (jsonData: string): Promise<boolean> => {
     if (!currentUser) {
@@ -397,13 +504,20 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
         ...contract,
         ownerId: currentUser.id,
         ownerUsername: currentUser.username,
-    }));
+      }));
 
+      // Await all save operations before updating state
+      await Promise.all([
+        saveData('jobs', jobsWithOwnership),
+        saveData('contracts', contractsWithOwnership),
+        saveData('clients', importedClients || []),
+        saveData('draftNotes', importedDrafts || []),
+        saveData('settings', importedSettings || defaultInitialSettings)
+      ]);
 
-      // Replace only current user's data, keep team members' jobs
+      // Update state after all saves are complete
       setJobs(prevJobs => [...prevJobs.filter(j => j.ownerId !== currentUser.id), ...jobsWithOwnership]);
       setContracts(prevContracts => [...prevContracts.filter(c => c.ownerId !== currentUser.id), ...contractsWithOwnership]);
-      
       setClients(importedClients || []);
       setDraftNotes(importedDrafts || []);
       setSettings(importedSettings || defaultInitialSettings);
@@ -420,7 +534,7 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       toast.error("Erro ao processar o arquivo de importação. Verifique se é um JSON válido.");
       return false;
     }
-  }, [currentUser]);
+  }, [currentUser, saveData]);
 
 
   const contextValue: AppDataContextType = {
