@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
@@ -5,7 +6,7 @@ import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
 import JobsPage from './pages/JobsPage';
 import ClientsPage from './pages/ClientsPage';
-import ClientDetailPage from './pages/ClientDetailPage'; // New
+import ClientDetailPage from './pages/ClientDetailPage'; 
 import ContractsPage from './pages/ContractsPage';
 import FinancialsPage from './pages/FinancialsPage';
 import PerformancePage from './pages/PerformancePage';
@@ -48,6 +49,7 @@ const PersistenceWarningBanner: React.FC = () => {
 const MainLayout: React.FC = () => {
   const { notifications, markAsRead } = useNotifications();
   const { settings } = useAppData();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (settings.theme === 'dark') {
@@ -59,19 +61,23 @@ const MainLayout: React.FC = () => {
   
   return (
     <div 
-      className="flex flex-col h-screen bg-main-bg text-text-primary" 
+      className="flex flex-col h-screen bg-main-bg text-text-primary overflow-hidden" 
     >
       <PersistenceWarningBanner />
-      <Header notifications={notifications} markNotificationsAsRead={markAsRead} />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
+      <Header 
+        notifications={notifications} 
+        markNotificationsAsRead={markAsRead} 
+        onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+      />
+      <div className="flex flex-1 overflow-hidden relative">
+        <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto w-full">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/jobs" element={<JobsPage />} />
             <Route path="/clients" element={<ClientsPage />} />
-            <Route path="/clients/:clientId" element={<ClientDetailPage />} /> {/* New Route */}
+            <Route path="/clients/:clientId" element={<ClientDetailPage />} /> 
             <Route path="/contracts" element={<ContractsPage />} />
             <Route path="/financials" element={<FinancialsPage />} />
             <Route path="/performance" element={<PerformancePage />} />
@@ -110,15 +116,12 @@ const useAppVisibility = () => {
       if (brandingSplashShownThisSession) {
         newCalculatedPhase = 'application'; // Branding done, go to app
       } else {
-        // If not shown, and we are not already in branding/fading, start branding.
-        // This handles transition from 'initial' or 'application' (e.g. after login) to 'branding'.
-        // If we are already 'branding' or 'fading', this logic won't change it, letting the timer effect proceed.
         if (appPhase !== 'branding' && appPhase !== 'fading') {
           newCalculatedPhase = 'branding';
         }
       }
     } else { // Not authenticated and not on an auth page
-      newCalculatedPhase = 'application'; // Shell needs to be visible for redirect by ProtectedRoute
+      newCalculatedPhase = 'application'; 
     }
     
     if (newCalculatedPhase !== appPhase) {
@@ -135,7 +138,7 @@ const useAppVisibility = () => {
       if (appPhase === 'branding') {
         brandingDisplayTimer = setTimeout(() => {
           setAppPhase('fading');
-        }, 0); // Removed 2-second delay for faster entry
+        }, 0); 
       } else if (appPhase === 'fading') {
         fadeTransitionTimer = setTimeout(() => {
           setAppPhase('application');
@@ -164,7 +167,6 @@ const App: React.FC = () => {
 
 const AppRouter: React.FC = () => {
   const { appPhase, showBrandingSplash, appContentVisible, isAuthPage } = useAppVisibility();
-  // Settings are used by BrandingSplashScreen internally, no need to pass from here or gate on settingsLoading.
 
   if (isAuthPage) {
     return (

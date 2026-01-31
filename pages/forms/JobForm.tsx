@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAppData } from '../../hooks/useAppData';
 import { Job, Client, ServiceType, JobStatus } from '../../types';
@@ -15,6 +16,7 @@ const JobForm: React.FC<JobFormProps> = ({ onSuccess, jobToEdit }) => {
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState<string>('');
   const [serviceType, setServiceType] = useState<ServiceType>(ServiceType.VIDEO);
+  const [customServiceType, setCustomServiceType] = useState('');
   const [value, setValue] = useState<number>(0);
   const [cost, setCost] = useState<number | undefined>(undefined);
   const [deadline, setDeadline] = useState('');
@@ -38,6 +40,7 @@ const JobForm: React.FC<JobFormProps> = ({ onSuccess, jobToEdit }) => {
       setName(jobToEdit.name);
       setClientId(jobToEdit.clientId);
       setServiceType(jobToEdit.serviceType);
+      setCustomServiceType(jobToEdit.customServiceType || '');
       setValue(jobToEdit.value);
       setCost(jobToEdit.cost);
       setLinkedContractId(jobToEdit.linkedContractId);
@@ -78,6 +81,7 @@ const JobForm: React.FC<JobFormProps> = ({ onSuccess, jobToEdit }) => {
       setName('');
       setClientId(clients.length > 0 ? clients[0].id : '');
       setServiceType(ServiceType.VIDEO);
+      setCustomServiceType('');
       setValue(0);
       setCost(undefined);
       setDeadline('');
@@ -135,6 +139,10 @@ const JobForm: React.FC<JobFormProps> = ({ onSuccess, jobToEdit }) => {
         toast.error('Por favor, defina um horário para a data de gravação.');
         return;
     }
+    if (serviceType === ServiceType.OTHER && !customServiceType.trim()) {
+        toast.error('Por favor, especifique o tipo do serviço.');
+        return;
+    }
 
     const finalCloudLinks = cloudLinks.map(link => link.trim()).filter(link => link !== '');
 
@@ -142,6 +150,7 @@ const JobForm: React.FC<JobFormProps> = ({ onSuccess, jobToEdit }) => {
       name,
       clientId,
       serviceType,
+      customServiceType: serviceType === ServiceType.OTHER ? customServiceType : undefined,
       value: Number(value),
       cost: cost ? Number(cost) : undefined,
       deadline: deadlineDate.toISOString(),
@@ -206,6 +215,16 @@ const JobForm: React.FC<JobFormProps> = ({ onSuccess, jobToEdit }) => {
                 <option key={option.value} value={option.value}>{option.label}</option>
             ))}
             </select>
+            {serviceType === ServiceType.OTHER && (
+                <input 
+                    type="text" 
+                    value={customServiceType} 
+                    onChange={(e) => setCustomServiceType(e.target.value)} 
+                    placeholder="Qual o tipo de serviço?" 
+                    className={`${commonInputClass} mt-2`} 
+                    required 
+                />
+            )}
         </div>
         <div>
             <label htmlFor="deadline" className="block text-sm font-medium text-text-secondary mb-1">Prazo de Entrega <span className="text-red-500">*</span></label>

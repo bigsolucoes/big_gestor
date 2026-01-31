@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Job, Client, JobStatus, JobObservation, Task, DraftNote, User, Contract } from '../types';
+import { Job, Client, JobStatus, Task, DraftNote, User, Contract } from '../types';
 import { useAppData } from '../hooks/useAppData';
 import { getJobPaymentSummary } from '../utils/jobCalculations';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { 
-    XIcon, PencilIcon, TrashIcon, PlusIcon, LinkIcon, CurrencyDollarIcon, ArchiveIcon, ContractIcon
+    XIcon, PencilIcon, TrashIcon, PlusIcon, LinkIcon, CurrencyDollarIcon, ArchiveIcon, ContractIcon, CheckSquareIcon, ListBulletIcon
 } from '../constants';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,28 +37,11 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 );
 
 const DetailsTabContent: React.FC<{ job: Job, client?: Client, isOwner: boolean }> = ({ job, client, isOwner }) => {
-    const { settings, updateJob, contracts } = useAppData();
-    const [newObservation, setNewObservation] = useState('');
+    const { settings, contracts } = useAppData();
     const [isContractModalOpen, setIsContractModalOpen] = useState(false);
 
     const { totalPaid, remaining } = getJobPaymentSummary(job);
     const linkedContract = contracts.find(c => c.id === job.linkedContractId);
-
-    const handleAddObservation = () => {
-        if (!newObservation.trim()) {
-          toast.error('Observação não pode estar vazia.');
-          return;
-        }
-        const observation: JobObservation = {
-          id: uuidv4(),
-          text: newObservation.trim(),
-          timestamp: new Date().toISOString(),
-        };
-        const updatedObservations = [...(job.observationsLog || []), observation];
-        updateJob({ ...job, observationsLog: updatedObservations });
-        setNewObservation('');
-        toast.success('Observação adicionada!');
-      };
     
     const getStatusColor = (status: JobStatus) => {
         switch (status) {
@@ -117,7 +101,10 @@ const DetailsTabContent: React.FC<{ job: Job, client?: Client, isOwner: boolean 
             </section>
             <section>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">Tipo de Serviço</h3>
-                <p className="text-text-primary">{job.serviceType}</p>
+                <p className="text-text-primary">
+                    {job.serviceType}
+                    {job.customServiceType && <span className="block text-xs text-accent italic">{job.customServiceType}</span>}
+                </p>
             </section>
             <section>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">Prazo</h3>
@@ -146,7 +133,6 @@ const DetailsTabContent: React.FC<{ job: Job, client?: Client, isOwner: boolean 
               <ul className="space-y-2">
                 {job.cloudLinks.map((link, index) => link && (
                   <li key={index} className="flex items-center space-x-2">
-                    {/* FIX: Replaced non-existent CloudLinkIcon with LinkIcon */}
                     <LinkIcon size={18} />
                     <a
                       href={link}
@@ -169,55 +155,19 @@ const DetailsTabContent: React.FC<{ job: Job, client?: Client, isOwner: boolean 
               <p className="text-sm text-text-secondary whitespace-pre-wrap bg-subtle-bg p-3 rounded-md">{job.notes}</p>
             </section>
           )}
-          
-          <section>
-            <h3 className="text-lg font-semibold text-text-primary mb-3">Observações / Atualizações</h3>
-            <div className="space-y-3 mb-4 max-h-60 overflow-y-auto pr-2">
-              {job.observationsLog && job.observationsLog.length > 0 ? (
-                [...job.observationsLog].reverse().map(obs => ( 
-                  <div key={obs.id} className="bg-subtle-bg p-3 rounded-md shadow-sm">
-                    <p className="text-sm text-text-primary whitespace-pre-wrap">{obs.text}</p>
-                    <p className="text-xs text-text-secondary mt-1 text-right">
-                      {formatDate(obs.timestamp, { dateStyle: 'short', timeStyle: 'short' })}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-text-secondary">Nenhuma observação ainda.</p>
-              )}
-            </div>
-            <div className="flex space-x-2">
-              <textarea
-                value={newObservation}
-                onChange={(e) => setNewObservation(e.target.value)}
-                placeholder={isOwner ? "Adicionar nova observação..." : "Apenas o proprietário pode adicionar observações."}
-                rows={2}
-                className="flex-grow p-2 border border-border-color rounded-md focus:ring-2 focus:ring-accent focus:border-accent text-text-primary bg-card-bg outline-none text-sm disabled:bg-subtle-bg"
-                disabled={!isOwner}
-              />
-              <button
-                onClick={handleAddObservation}
-                className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-md h-fit self-end disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Adicionar Observação"
-                disabled={!isOwner}
-              >
-                <PlusIcon size={20} />
-              </button>
-            </div>
-          </section>
         </div>
     );
 };
 
-const TasksTab: React.FC<{ job: Job, onUpdateTasks: (tasks: Task[]) => void, isOwner: boolean }> = ({ job, onUpdateTasks, isOwner }) => {
-    const [newTaskText, setNewTaskText] = useState('');
+const ActivitiesTab: React.FC<{ job: Job, onUpdateTasks: (tasks: Task[]) => void, isOwner: boolean }> = ({ job, onUpdateTasks, isOwner }) => {
+    const [newItemText, setNewItemText] = useState('');
 
-    const handleAddTask = () => {
-        if (!newTaskText.trim()) return;
-        const newTask: Task = { id: uuidv4(), text: newTaskText.trim(), isCompleted: false };
+    const handleAddItem = () => {
+        if (!newItemText.trim()) return;
+        const newTask: Task = { id: uuidv4(), text: newItemText.trim(), isCompleted: false };
         onUpdateTasks([...(job.tasks || []), newTask]);
-        setNewTaskText('');
-        toast.success("Tarefa adicionada!");
+        setNewItemText('');
+        toast.success("Atualização adicionada!");
     };
 
     const toggleTask = (taskId: string) => {
@@ -231,42 +181,59 @@ const TasksTab: React.FC<{ job: Job, onUpdateTasks: (tasks: Task[]) => void, isO
         onUpdateTasks((job.tasks || []).filter(task => task.id !== taskId));
     };
 
-    const completedCount = job.tasks?.filter(t => t.isCompleted).length || 0;
-    const totalCount = job.tasks?.length || 0;
-
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
              <div className="flex space-x-2">
                 <input
                     type="text"
-                    value={newTaskText}
-                    onChange={(e) => setNewTaskText(e.target.value)}
-                    onKeyDown={(e) => {if(e.key === 'Enter'){ e.preventDefault(); handleAddTask();}}}
-                    placeholder={isOwner ? "Adicionar nova tarefa e pressionar Enter" : "Apenas o proprietário pode adicionar tarefas."}
+                    value={newItemText}
+                    onChange={(e) => setNewItemText(e.target.value)}
+                    onKeyDown={(e) => {if(e.key === 'Enter'){ e.preventDefault(); handleAddItem();}}}
+                    placeholder={isOwner ? "Adicionar atualização, tarefa ou obs..." : "Apenas o proprietário pode adicionar itens."}
                     className="flex-grow p-2 border border-border-color rounded-md text-sm outline-none focus:ring-2 focus:ring-accent disabled:bg-subtle-bg"
                     disabled={!isOwner}
                 />
-                <button onClick={handleAddTask} className="bg-accent text-white px-3 rounded-md hover:brightness-90 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isOwner}><PlusIcon size={20} /></button>
+                <button onClick={handleAddItem} className="bg-accent text-white px-3 rounded-md hover:brightness-90 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isOwner}><PlusIcon size={20} /></button>
             </div>
-            {totalCount > 0 && <p className="text-sm text-text-secondary">{completedCount} de {totalCount} tarefas concluídas.</p>}
+            
             <div className="space-y-2 max-h-[calc(100vh-450px)] overflow-y-auto pr-2">
-                {(job.tasks || []).map(task => (
-                    <div key={task.id} className="flex items-center p-2 bg-subtle-bg rounded-md group">
+                {(job.tasks || []).length === 0 && (job.observationsLog || []).length === 0 && (
+                    <p className="text-center text-text-secondary text-sm py-4">Nenhuma atividade registrada.</p>
+                )}
+                
+                {/* Active Tasks/Updates */}
+                {[...(job.tasks || [])].reverse().map(task => (
+                    <div key={task.id} className="flex items-start p-3 bg-subtle-bg rounded-md group hover:bg-hover-bg transition-colors">
                         <input
                             type="checkbox"
                             checked={task.isCompleted}
                             onChange={() => toggleTask(task.id)}
-                            className="h-5 w-5 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer disabled:cursor-not-allowed"
+                            className="mt-0.5 h-5 w-5 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
                             disabled={!isOwner}
                         />
-                        <span className={`flex-grow mx-3 text-sm ${task.isCompleted ? 'line-through text-text-secondary' : 'text-text-primary'}`}>{task.text}</span>
+                        <span className={`flex-grow mx-3 text-sm whitespace-pre-wrap ${task.isCompleted ? 'line-through text-text-secondary' : 'text-text-primary'}`}>{task.text}</span>
                         {isOwner && (
-                            <button onClick={() => deleteTask(task.id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded-full">
+                            <button onClick={() => deleteTask(task.id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded-full flex-shrink-0">
                                 <TrashIcon size={16}/>
                             </button>
                         )}
                     </div>
                 ))}
+                
+                {/* Legacy Observations Log (Read Only) */}
+                {job.observationsLog && job.observationsLog.length > 0 && (
+                    <div className="mt-6 pt-4 border-t border-border-color">
+                         <h4 className="text-xs font-bold text-text-secondary uppercase mb-2">Histórico Antigo (Legado)</h4>
+                         <div className="space-y-2 opacity-80">
+                            {[...job.observationsLog].reverse().map(obs => (
+                                <div key={obs.id} className="bg-slate-50 p-2 rounded border border-slate-100">
+                                    <p className="text-sm text-text-secondary whitespace-pre-wrap">{obs.text}</p>
+                                    <p className="text-xs text-slate-400 mt-1 text-right">{formatDate(obs.timestamp, { dateStyle: 'short', timeStyle: 'short' })}</p>
+                                </div>
+                            ))}
+                         </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -341,7 +308,7 @@ const JobDetailsPanel: React.FC<JobDetailsPanelProps> = ({
   onOpenTrash,
 }) => {
   const { updateJob } = useAppData();
-  const [activeTab, setActiveTab] = useState<'details' | 'tasks' | 'drafts'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'activities' | 'drafts'>('details');
   const panelRef = useRef<HTMLDivElement>(null);
   const isOwner = job.ownerId === currentUser.id;
 
@@ -399,13 +366,13 @@ const JobDetailsPanel: React.FC<JobDetailsPanelProps> = ({
 
         <div className="flex-grow flex flex-col overflow-hidden">
             <div className="px-4 border-b border-border-color flex space-x-2 bg-subtle-bg">
-                <TabButton active={activeTab === 'details'} onClick={() => setActiveTab('details')}>Detalhes</TabButton>
-                <TabButton active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')}>Tarefas</TabButton>
+                <TabButton active={activeTab === 'details'} onClick={() => setActiveTab('details')}>Visão Geral</TabButton>
+                <TabButton active={activeTab === 'activities'} onClick={() => setActiveTab('activities')}>Atividades</TabButton>
                 <TabButton active={activeTab === 'drafts'} onClick={() => setActiveTab('drafts')}>Roteiros</TabButton>
             </div>
             <div className="p-6 overflow-y-auto flex-grow">
                 {activeTab === 'details' && <DetailsTabContent job={job} client={client} isOwner={isOwner} />}
-                {activeTab === 'tasks' && <TasksTab job={job} onUpdateTasks={handleUpdateTasks} isOwner={isOwner} />}
+                {activeTab === 'activities' && <ActivitiesTab job={job} onUpdateTasks={handleUpdateTasks} isOwner={isOwner} />}
                 {activeTab === 'drafts' && <DraftsTab job={job} onUpdateLinkedDrafts={handleUpdateLinkedDrafts} onClosePanel={onClose} isOwner={isOwner} />}
             </div>
         </div>

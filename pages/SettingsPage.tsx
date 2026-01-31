@@ -1,12 +1,200 @@
+
 import React, { useState, useEffect, ChangeEvent, useRef } from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import { APP_NAME, SettingsIcon as PageIcon, LinkIcon, DownloadIcon, UploadIcon, UsersIcon, XIcon, ImageUpIcon, ImageOffIcon } from '../constants'; 
+import { APP_NAME, SettingsIcon as PageIcon, LinkIcon, DownloadIcon, UploadIcon, UsersIcon, XIcon, ImageUpIcon, ImageOffIcon, LockIcon, KeyIcon, CopyIcon, PlusCircleIcon, CheckCircleIcon, TrashIcon } from '../constants'; 
 import LoadingSpinner from '../components/LoadingSpinner'; 
-import { User } from '../types';
+import { User, License, BugReport } from '../types';
 import { isPersistenceEnabled } from '../services/blobStorageService';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Bug, Check } from 'lucide-react';
+import * as blobService from '../services/blobStorageService';
+
+const LicenseManager: React.FC<{ currentUser: User }> = ({ currentUser }) => {
+    const [licenses, setLicenses] = useState<License[]>([]);
+    const [isLoadingLicenses, setIsLoadingLicenses] = useState(false);
+    const SYSTEM_USER_ID = 'system_data';
+
+    const loadLicenses = async () => {
+        setIsLoadingLicenses(true);
+        const data = await blobService.get<License[]>(SYSTEM_USER_ID, 'licenses');
+        setLicenses(data || []);
+        setIsLoadingLicenses(false);
+    };
+
+    useEffect(() => {
+        loadLicenses();
+    }, []);
+
+    const generateLicense = async () => {
+        const randomString = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
+                             Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
+                             Math.random().toString(36).substring(2, 6).toUpperCase();
+        
+        const newLicense: License = {
+            key: `BIG-${randomString}`,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            createdBy: currentUser.username
+        };
+
+        const updatedLicenses = [newLicense, ...licenses];
+        await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
+        setLicenses(updatedLicenses);
+        toast.success("Nova licença gerada!");
+    };
+
+    const revokeLicense = async (key: string) => {
+        if (!window.confirm("Tem certeza que deseja revogar esta licença? Se ela já estiver em uso, o usuário perderá o acesso imediatamente.")) return;
+
+        const updatedLicenses = licenses.map(l => l.key === key ? { ...l, status: 'revoked' as const } : l);
+        await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
+        setLicenses(updatedLicenses);
+        toast.success("Licença revogada. O acesso foi bloqueado.");
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast.success("Copiado!");
+    };
+
+    return (
+        <div className="bg-card-bg p-6 rounded-xl shadow-lg border border-border-color border-l-4 border-l-accent">
+            <h2 className="text-xl font-semibold text-text-primary mb-4 flex items-center">
+                <LockIcon size={22} className="mr-2 text-accent"/> Administração de Licenças
+            </h2>
+            <p className="text-sm text-text-secondary mb-4">Gerencie quem pode criar conta no sistema gerando chaves de convite.</p>
+            
+            <button 
+                onClick={generateLicense}
+                className="bg-accent text-white px-4 py-2 rounded-lg shadow hover:brightness-90 transition-all flex items-center mb-6"
+            >
+                <PlusCircleIcon size={20} /> <span className="ml-2">Gerar Nova Licença</span>
+            </button>
+
+            <div className="overflow-x-auto border border-border-color rounded-lg">
+                <table className="min-w-full divide-y divide-border-color">
+                    <thead className="bg-subtle-bg">
+                        <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Chave</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Usado Por</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Criado em</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-card-bg divide-y divide-border-color">
+                        {isLoadingLicenses ? (
+                             <tr><td colSpan={5} className="p-4 text-center"><LoadingSpinner size="sm"/></td></tr>
+                        ) : licenses.length === 0 ? (
+                            <tr><td colSpan={5} className="p-4 text-center text-text-secondary">Nenhuma licença gerada.</td></tr>
+                        ) : (
+                            licenses.map(lic => (
+                                <tr key={lic.key} className={lic.status === 'used' || lic.status === 'revoked' ? 'opacity-60 bg-slate-50' : ''}>
+                                    <td className={`px-4 py-3 text-sm font-mono font-medium flex items-center ${lic.status === 'revoked' ? 'line-through text-red-400' : 'text-text-primary'}`}>
+                                        {lic.key}
+                                        <button onClick={() => copyToClipboard(lic.key)} className="ml-2 text-text-secondary hover:text-accent" title="Copiar">
+                                            <CopyIcon size={14} />
+                                        </button>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">
+                                        {lic.status === 'active' && <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">Ativa</span>}
+                                        {lic.status === 'used' && <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold">Usada</span>}
+                                        {lic.status === 'revoked' && <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">Revogada</span>}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-text-secondary">{lic.usedBy || '-'}</td>
+                                    <td className="px-4 py-3 text-sm text-text-secondary">{new Date(lic.createdAt).toLocaleDateString()}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                        {(lic.status === 'active' || lic.status === 'used') && (
+                                            <button 
+                                                onClick={() => revokeLicense(lic.key)}
+                                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
+                                                title="Revogar Licença (Bloquear Acesso)"
+                                            >
+                                                <TrashIcon size={16} />
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+const BugReportManager: React.FC = () => {
+    const [reports, setReports] = useState<BugReport[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const SYSTEM_USER_ID = 'system_data';
+
+    const loadReports = async () => {
+        setIsLoading(true);
+        const data = await blobService.get<BugReport[]>(SYSTEM_USER_ID, 'bug_reports');
+        setReports(data || []);
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        loadReports();
+    }, []);
+
+    const markAsResolved = async (id: string) => {
+        const updatedReports = reports.map(r => r.id === id ? { ...r, status: 'resolved' as const } : r);
+        setReports(updatedReports);
+        await blobService.set(SYSTEM_USER_ID, 'bug_reports', updatedReports);
+        toast.success("Bug marcado como resolvido.");
+    };
+
+    const deleteReport = async (id: string) => {
+        if(!window.confirm("Apagar este reporte?")) return;
+        const updatedReports = reports.filter(r => r.id !== id);
+        setReports(updatedReports);
+        await blobService.set(SYSTEM_USER_ID, 'bug_reports', updatedReports);
+    };
+
+    return (
+        <div className="bg-card-bg p-6 rounded-xl shadow-lg border border-border-color border-l-4 border-l-red-500 mt-8">
+            <h2 className="text-xl font-semibold text-text-primary mb-4 flex items-center">
+                <Bug size={22} className="mr-2 text-red-500"/> Central de Bugs e Relatos
+            </h2>
+            
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                {isLoading ? (
+                    <LoadingSpinner />
+                ) : reports.length === 0 ? (
+                    <p className="text-text-secondary text-center py-4">Nenhum bug reportado.</p>
+                ) : (
+                    reports.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map(report => (
+                        <div key={report.id} className={`p-4 rounded-lg border ${report.status === 'resolved' ? 'bg-subtle-bg border-border-color opacity-70' : 'bg-white border-red-200 shadow-sm'}`}>
+                            <div className="flex justify-between items-start mb-2">
+                                <div>
+                                    <span className="font-bold text-text-primary text-sm">{report.reporter}</span>
+                                    <span className="text-xs text-text-secondary ml-2">{new Date(report.timestamp).toLocaleString()}</span>
+                                </div>
+                                <div className="flex space-x-2">
+                                    {report.status === 'open' && (
+                                        <button onClick={() => markAsResolved(report.id)} className="text-green-600 hover:bg-green-100 p-1 rounded" title="Marcar Resolvido">
+                                            <Check size={16} />
+                                        </button>
+                                    )}
+                                    <button onClick={() => deleteReport(report.id)} className="text-red-500 hover:bg-red-100 p-1 rounded" title="Excluir">
+                                        <TrashIcon size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                            <p className="text-sm text-text-primary whitespace-pre-wrap">{report.description}</p>
+                            <p className="text-xs font-semibold mt-2 uppercase tracking-wide text-text-secondary">Status: {report.status === 'open' ? <span className="text-red-500">Aberto</span> : <span className="text-green-600">Resolvido</span>}</p>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};
+
 
 const SettingsPage: React.FC = () => {
   const { 
@@ -20,6 +208,7 @@ const SettingsPage: React.FC = () => {
   const { currentUser, changePassword } = useAuth();
   
   const [asaasUrlInput, setAsaasUrlInput] = useState(settings.asaasUrl || '');
+  const [customLinkTitleInput, setCustomLinkTitleInput] = useState(settings.customLinkTitle || 'Acessar Asaas');
   const [userNameInput, setUserNameInput] = useState(settings.userName || '');
   const [teamMemberInput, setTeamMemberInput] = useState('');
   const [suggestions, setSuggestions] = useState<User[]>([]);
@@ -36,6 +225,7 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     if (!loading) {
       setAsaasUrlInput(settings.asaasUrl || 'https://www.asaas.com/login');
+      setCustomLinkTitleInput(settings.customLinkTitle || 'Acessar Asaas');
       setUserNameInput(settings.userName || '');
     }
   }, [settings, loading]);
@@ -43,7 +233,7 @@ const SettingsPage: React.FC = () => {
   const handleSaveChanges = () => {
     try {
         if (asaasUrlInput && !isValidHttpUrl(asaasUrlInput)) {
-            toast.error('URL do Asaas inválida. Deve começar com http:// ou https://');
+            toast.error('URL inválida. Deve começar com http:// ou https://');
             return;
         }
     } catch(e) {
@@ -52,7 +242,8 @@ const SettingsPage: React.FC = () => {
     }
 
     updateSettings({
-      asaasUrl: asaasUrlInput || undefined, 
+      asaasUrl: asaasUrlInput || undefined,
+      customLinkTitle: customLinkTitleInput || 'Acessar Link', 
       userName: userNameInput || undefined,
     });
     toast.success('Configurações salvas com sucesso!');
@@ -175,6 +366,8 @@ const SettingsPage: React.FC = () => {
 
   if (loading) return <div className="flex justify-center items-center h-full"><LoadingSpinner /></div>;
 
+  const isAdmin = currentUser?.username.toLowerCase() === 'luizmellol';
+
   return (
     <div className="space-y-8">
       <div className="flex items-center">
@@ -182,6 +375,14 @@ const SettingsPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-text-primary">Configurações</h1>
       </div>
       
+      {/* Admin Panel - Only visible to luizmellol */}
+      {isAdmin && currentUser && (
+          <>
+            <LicenseManager currentUser={currentUser} />
+            <BugReportManager />
+          </>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-8">
           <div className={sectionCardClass}>
@@ -238,10 +439,16 @@ const SettingsPage: React.FC = () => {
           </div>
           
           <div className={sectionCardClass}>
-            <h2 className="text-xl font-semibold text-text-primary mb-4 flex items-center"><LinkIcon size={22} className="mr-2 text-accent"/>Links Externos</h2>
-            <div>
-              <label htmlFor="asaasUrl" className="block text-sm font-medium text-text-secondary mb-1">URL da Página de Pagamentos (Asaas)</label>
-              <input type="url" id="asaasUrl" value={asaasUrlInput} onChange={(e) => setAsaasUrlInput(e.target.value)} className={commonInputClass} placeholder="Ex: https://www.asaas.com/login" />
+            <h2 className="text-xl font-semibold text-text-primary mb-4 flex items-center"><LinkIcon size={22} className="mr-2 text-accent"/>Botão Personalizado (Menu)</h2>
+            <div className="space-y-4">
+                <div>
+                    <label htmlFor="customLinkTitle" className="block text-sm font-medium text-text-secondary mb-1">Título do Botão</label>
+                    <input type="text" id="customLinkTitle" value={customLinkTitleInput} onChange={(e) => setCustomLinkTitleInput(e.target.value)} className={commonInputClass} placeholder="Ex: Acessar Asaas" />
+                </div>
+                <div>
+                    <label htmlFor="asaasUrl" className="block text-sm font-medium text-text-secondary mb-1">URL de Destino</label>
+                    <input type="url" id="asaasUrl" value={asaasUrlInput} onChange={(e) => setAsaasUrlInput(e.target.value)} className={commonInputClass} placeholder="Ex: https://www.asaas.com/login" />
+                </div>
             </div>
           </div>
           

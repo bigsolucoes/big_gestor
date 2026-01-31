@@ -1,8 +1,9 @@
+
 import React, { useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAppData } from '../hooks/useAppData';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { ChevronLeftIcon, UsersIcon, WalletIcon, BriefcaseIcon, CheckCircleIcon, ClockIcon, ContractIcon } from '../constants';
+import { ChevronLeftIcon, UsersIcon, WalletIcon, BriefcaseIcon, CheckCircleIcon, ClockIcon, ContractIcon, InstagramIcon, CalendarHeartIcon } from '../constants';
 import { getJobPaymentSummary } from '../utils/jobCalculations';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { Job, JobStatus, Contract } from '../types';
@@ -66,6 +67,11 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
+  // Helper to format birthday nicely
+  const formattedBirthday = client.birthday 
+    ? new Date(client.birthday).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', timeZone: 'UTC' }) 
+    : null;
+
 
   return (
     <div className="space-y-6">
@@ -81,11 +87,29 @@ const ClientDetailPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-text-primary flex items-center">
               <UsersIcon size={28} className="mr-3 text-accent" /> {client.name}
             </h1>
-            {client.company && <p className="text-text-secondary mt-1">{client.company}</p>}
+            {client.company && <p className="text-text-secondary mt-1 text-lg">{client.company}</p>}
+             <div className="flex flex-wrap gap-4 mt-3">
+                {client.instagram && (
+                    <a 
+                        href={`https://instagram.com/${client.instagram.replace('@', '')}`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="flex items-center text-pink-600 hover:text-pink-700 bg-pink-50 hover:bg-pink-100 px-3 py-1 rounded-full text-sm font-medium transition-colors"
+                    >
+                        <InstagramIcon size={16} className="mr-1.5"/> @{client.instagram.replace('@', '')}
+                    </a>
+                )}
+                {formattedBirthday && (
+                     <span className="flex items-center text-purple-600 bg-purple-50 px-3 py-1 rounded-full text-sm font-medium">
+                        <CalendarHeartIcon size={16} className="mr-1.5"/> {formattedBirthday}
+                    </span>
+                )}
+            </div>
           </div>
-          <div className="text-sm text-text-secondary md:text-right">
+          <div className="text-sm text-text-secondary md:text-right space-y-1">
             <p><strong>Email:</strong> {client.email}</p>
             {client.phone && <p><strong>Telefone:</strong> {client.phone}</p>}
+            {client.cpf && <p><strong>CPF:</strong> {client.cpf}</p>}
             <p><strong>Cliente desde:</strong> {formatDate(client.createdAt)}</p>
           </div>
         </div>

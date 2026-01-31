@@ -1,12 +1,14 @@
+
 import React, { useState, useMemo, Fragment } from 'react';
 import { useAppData } from '../hooks/useAppData';
-import { Job, FinancialJobStatus, JobStatus, Payment } from '../types';
+import { Job, FinancialJobStatus, JobStatus, Payment, Task } from '../types';
 import { getJobPaymentSummary } from '../utils/jobCalculations';
-import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, CurrencyDollarIcon, ChevronDownIcon, ChevronUpIcon } from '../constants';
+import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, CurrencyDollarIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon, CheckSquareIcon, TrashIcon } from '../constants';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PaymentRegistrationModal from '../components/modals/PaymentRegistrationModal'; 
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { v4 as uuidv4 } from 'uuid';
 
 const getFinancialStatus = (job: Job, totalPaid: number, remaining: number): FinancialJobStatus => {
     if (job.status === JobStatus.PAID || (job.value > 0 && remaining <= 0)) {
@@ -36,9 +38,61 @@ const getFinancialStatus = (job: Job, totalPaid: number, remaining: number): Fin
 
 type FinancialFilter = 'all' | 'overdue' | 'paid' | 'on-time';
 
+const FinancialTasksList: React.FC<{ job: Job, onUpdate: (updatedJob: Job) => void }> = ({ job, onUpdate }) => {
+    const [newTaskText, setNewTaskText] = useState('');
+
+    const handleAddTask = () => {
+        if (!newTaskText.trim()) return;
+        const newTask: Task = { id: uuidv4(), text: newTaskText.trim(), isCompleted: false };
+        const updatedJob = { ...job, financialTasks: [...(job.financialTasks || []), newTask] };
+        onUpdate(updatedJob);
+        setNewTaskText('');
+    };
+
+    const toggleTask = (taskId: string) => {
+        const updatedTasks = (job.financialTasks || []).map(t => t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t);
+        onUpdate({ ...job, financialTasks: updatedTasks });
+    };
+
+    const deleteTask = (taskId: string) => {
+        const updatedTasks = (job.financialTasks || []).filter(t => t.id !== taskId);
+        onUpdate({ ...job, financialTasks: updatedTasks });
+    };
+
+    return (
+        <div className="mt-4 border-t border-border-color pt-4">
+             <h4 className="font-semibold text-sm mb-2 text-text-primary flex items-center">
+                <CheckSquareIcon size={16} className="mr-1.5"/> Checklist Financeiro (Notas, Recibos)
+             </h4>
+             <div className="flex gap-2 mb-3">
+                 <input 
+                    type="text" 
+                    value={newTaskText} 
+                    onChange={(e) => setNewTaskText(e.target.value)} 
+                    placeholder="Ex: Emitir Nota Fiscal, Enviar Recibo..."
+                    className="flex-grow text-sm p-1.5 border border-border-color rounded focus:ring-1 focus:ring-accent outline-none"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                 />
+                 <button onClick={handleAddTask} className="bg-slate-200 hover:bg-slate-300 text-text-primary p-1.5 rounded transition-colors"><PlusIcon size={16}/></button>
+             </div>
+             <div className="space-y-1">
+                 {(job.financialTasks || []).length === 0 && <p className="text-xs text-text-secondary italic">Nenhuma tarefa financeira.</p>}
+                 {(job.financialTasks || []).map(task => (
+                     <div key={task.id} className="flex items-center justify-between bg-white p-2 rounded border border-slate-100 group">
+                         <div className="flex items-center">
+                             <input type="checkbox" checked={task.isCompleted} onChange={() => toggleTask(task.id)} className="mr-2 cursor-pointer text-accent focus:ring-accent rounded"/>
+                             <span className={`text-sm ${task.isCompleted ? 'line-through text-text-secondary' : 'text-text-primary'}`}>{task.text}</span>
+                         </div>
+                         <button onClick={() => deleteTask(task.id)} className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon size={14}/></button>
+                     </div>
+                 ))}
+             </div>
+        </div>
+    );
+};
 
 const FinancialsPage: React.FC = () => {
-  const { jobs, clients, settings, loading } = useAppData(); 
+  const { jobs, clients, settings, loading, updateJob } = useAppData(); 
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedJobForPayment, setSelectedJobForPayment] = useState<Job | undefined>(undefined);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -144,7 +198,7 @@ const FinancialsPage: React.FC = () => {
     <div>
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold text-text-primary">Central Financeira</h1>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 overflow-x-auto max-w-full pb-1">
             <FilterButton value="all" currentFilter={filter} onClick={setFilter}>Todos</FilterButton>
             <FilterButton value="overdue" currentFilter={filter} onClick={setFilter}>Inadimplentes</FilterButton>
             <FilterButton value="paid" currentFilter={filter} onClick={setFilter}>Concluídos</FilterButton>
@@ -171,11 +225,9 @@ const FinancialsPage: React.FC = () => {
                 <Fragment key={record.id}>
                     <tr className="hover:bg-hover-bg transition-colors">
                         <td className="px-4 py-4">
-                            {record.payments.length > 0 && (
-                                <button onClick={() => toggleRowExpansion(record.id)} className="p-1 rounded-full hover:bg-highlight-bg">
-                                    {expandedRowId === record.id ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16}/>}
-                                </button>
-                            )}
+                            <button onClick={() => toggleRowExpansion(record.id)} className="p-1 rounded-full hover:bg-highlight-bg">
+                                {expandedRowId === record.id ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16}/>}
+                            </button>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-text-primary">{record.name}</div>
@@ -208,30 +260,34 @@ const FinancialsPage: React.FC = () => {
                     {expandedRowId === record.id && (
                         <tr className="bg-subtle-bg">
                             <td colSpan={7} className="p-0">
-                                <div className="p-4">
-                                    <h4 className="font-semibold text-sm mb-2 text-text-primary">Registros de Pagamento: {record.name}</h4>
-                                    <div className="border border-border-color rounded-lg overflow-hidden">
-                                        <table className="min-w-full">
-                                            <thead className="bg-highlight-bg">
-                                                <tr>
-                                                    <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">Data</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">Valor</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">Método</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">Observações</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="bg-card-bg divide-y divide-border-color">
-                                                {record.payments.map(p => (
-                                                <tr key={p.id}>
-                                                    <td className="px-3 py-2 text-sm text-text-secondary">{formatDate(p.date, {dateStyle: 'short', timeStyle: 'short'})}</td>
-                                                    <td className="px-3 py-2 text-sm text-text-primary">{formatCurrency(p.amount, settings.privacyModeEnabled)}</td>
-                                                    <td className="px-3 py-2 text-sm text-text-secondary">{p.method || '---'}</td>
-                                                    <td className="px-3 py-2 text-sm text-text-secondary">{p.notes || '---'}</td>
-                                                </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Left Column: Payments History */}
+                                    <div>
+                                        <h4 className="font-semibold text-sm mb-2 text-text-primary">Histórico de Pagamentos</h4>
+                                        <div className="border border-border-color rounded-lg overflow-hidden bg-card-bg">
+                                            <table className="min-w-full">
+                                                <thead className="bg-highlight-bg">
+                                                    <tr>
+                                                        <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">Data</th>
+                                                        <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">Valor</th>
+                                                        <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary">Método</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border-color">
+                                                    {record.payments.length > 0 ? record.payments.map(p => (
+                                                    <tr key={p.id}>
+                                                        <td className="px-3 py-2 text-sm text-text-secondary">{formatDate(p.date, {dateStyle: 'short', timeStyle: 'short'})}</td>
+                                                        <td className="px-3 py-2 text-sm text-text-primary">{formatCurrency(p.amount, settings.privacyModeEnabled)}</td>
+                                                        <td className="px-3 py-2 text-sm text-text-secondary">{p.method || '---'}</td>
+                                                    </tr>
+                                                    )) : <tr><td colSpan={3} className="px-3 py-2 text-xs text-text-secondary text-center">Nenhum pagamento registrado.</td></tr>}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
+                                    
+                                    {/* Right Column: Financial Checklist */}
+                                    <FinancialTasksList job={record} onUpdate={updateJob} />
                                 </div>
                             </td>
                         </tr>

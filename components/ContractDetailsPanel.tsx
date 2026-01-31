@@ -1,7 +1,8 @@
+
 import React, { useMemo } from 'react';
 import { Contract, Job, User } from '../types';
 import { useAppData } from '../hooks/useAppData';
-import { XIcon, PencilIcon, TrashIcon, BriefcaseIcon } from '../constants';
+import { XIcon, PencilIcon, TrashIcon, BriefcaseIcon, CalendarIcon } from '../constants';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -59,10 +60,18 @@ const ContractDetailsPanel: React.FC<ContractDetailsPanelProps> = ({ contract, c
         </div>
 
         <div className="flex-grow overflow-y-auto p-6 space-y-6">
-            <section>
-                <h3 className="text-sm font-medium text-text-secondary mb-1">Cliente</h3>
-                <p className="text-text-primary font-medium">{client?.name || 'Cliente desconhecido'}</p>
-            </section>
+            <div className="flex justify-between items-start">
+                <section>
+                    <h3 className="text-sm font-medium text-text-secondary mb-1">Cliente</h3>
+                    <p className="text-text-primary font-medium">{client?.name || 'Cliente desconhecido'}</p>
+                </section>
+                {contract.duration && contract.duration !== 'Pontual' && (
+                    <div className={`px-3 py-1 rounded-lg border text-sm font-semibold flex items-center ${contract.duration === 'Anual' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                        <CalendarIcon size={14} className="mr-1.5"/> {contract.duration}
+                    </div>
+                )}
+            </div>
+            
              <section>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">Criado por</h3>
                 <p className="text-text-primary font-medium">{contract.ownerUsername}</p>

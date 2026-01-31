@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { Job, Client, ServiceType, JobStatus } from '../types';
@@ -96,7 +97,7 @@ const PageOne: React.FC = () => {
     // The previous implementation had a compile error and incorrect alphabetical sorting logic.
     const metricsData = useMemo(() => Object.entries(monthlyMetricsMap)
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([yearMonthKey, data]) => ({
+    .map(([yearMonthKey, data]: [string, { revenue: number, cost: number, newJobs: number, completedJobs: number }]) => ({
         name: new Date(yearMonthKey + '-02').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
         Receita: data.revenue,
         Custo: data.cost,

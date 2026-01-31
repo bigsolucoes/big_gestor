@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { Job, JobStatus, Client, User } from '../types';
@@ -5,7 +6,7 @@ import { getJobPaymentSummary } from '../utils/jobCalculations';
 import { 
     KANBAN_COLUMNS, PlusCircleIcon, BriefcaseIcon, 
     ListBulletIcon, CurrencyDollarIcon, TableCellsIcon,
-    ArchiveIcon, TrashIcon, CheckSquareIcon, UsersIcon
+    ArchiveIcon, TrashIcon, CheckSquareIcon, UsersIcon, PencilIcon, SaveIcon, XIcon
 } from '../constants';
 import Modal from '../components/Modal';
 import JobForm from './forms/JobForm';
@@ -75,6 +76,9 @@ const JobCard: React.FC<{
             </span>
           </div>
           <p className="text-sm text-text-secondary mt-1">{client?.name || 'Cliente desconhecido'}</p>
+          {job.serviceType === 'Outro' && job.customServiceType && (
+             <p className="text-xs text-accent font-medium mt-0.5 italic">{job.customServiceType}</p>
+          )}
           {!isOwner && (
             <p className="text-xs font-semibold text-slate-500 mt-1 flex items-center"><UsersIcon size={12} className="mr-1"/>{job.ownerUsername}</p>
           )}
@@ -103,7 +107,7 @@ const JobCard: React.FC<{
 
 
 const JobsPage: React.FC = () => {
-  const { jobs, clients, updateJob, deleteJob, setJobForDetails, jobForDetails, settings, loading } = useAppData();
+  const { jobs, clients, updateJob, deleteJob, setJobForDetails, jobForDetails, settings, updateSettings, loading } = useAppData();
   const { currentUser } = useAuth();
   const [isJobModalOpen, setJobModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | undefined>(undefined);
@@ -112,6 +116,10 @@ const JobsPage: React.FC = () => {
   const [jobForPayment, setJobForPayment] = useState<Job | undefined>(undefined);
   const [isTrashModalOpen, setTrashModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Kanban Column Renaming State
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [tempColumnTitle, setTempColumnTitle] = useState('');
 
   useEffect(() => {
     const savedViewMode = localStorage.getItem('big_job_view_mode');
@@ -193,6 +201,26 @@ const JobsPage: React.FC = () => {
         toast.success('Job arquivado com sucesso!');
     }
   };
+
+  // Kanban Column Editing
+  const startEditingColumn = (columnId: string, currentTitle: string) => {
+      setEditingColumnId(columnId);
+      setTempColumnTitle(currentTitle);
+  };
+
+  const saveColumnTitle = (columnId: string) => {
+      if (tempColumnTitle.trim()) {
+          const newColumns = { ...settings.kanbanColumns, [columnId]: tempColumnTitle };
+          updateSettings({ kanbanColumns: newColumns });
+          toast.success("Coluna renomeada!");
+      }
+      setEditingColumnId(null);
+  };
+
+  const cancelEditingColumn = () => {
+      setEditingColumnId(null);
+      setTempColumnTitle('');
+  };
   
   if (loading || !currentUser) {
     return <div className="flex justify-center items-center h-full"><LoadingSpinner /></div>;
@@ -235,31 +263,65 @@ const JobsPage: React.FC = () => {
 
       {viewMode === 'kanban' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 overflow-x-auto pb-4">
-          {KANBAN_COLUMNS.map(column => (
-            <div
-              key={column.id}
-              onDrop={(e) => handleDrop(e, column.status)}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              className="bg-subtle-bg p-3 rounded-lg min-h-[500px] transition-all"
-            >
-              <h3 className="font-semibold mb-3 text-text-primary text-center pb-2 border-b-2 border-border-color">{column.title}</h3>
-              {filteredJobs
-                .filter(job => job.status === column.status)
-                .map(job => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    client={clients.find(c => c.id === job.clientId)}
-                    currentUser={currentUser}
-                    onClick={() => handleJobClick(job)}
-                    onDragStart={handleDragStart}
-                    onArchive={(e) => { e.stopPropagation(); handleArchiveJob(job.id); }}
-                    onDelete={(e) => { e.stopPropagation(); handleDeleteJob(job.id); }}
-                  />
-                ))}
-            </div>
-          ))}
+          {KANBAN_COLUMNS.map(column => {
+            const columnTitle = settings.kanbanColumns?.[column.id] || column.title;
+            const isEditing = editingColumnId === column.id;
+
+            return (
+                <div
+                key={column.id}
+                onDrop={(e) => handleDrop(e, column.status)}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className="bg-subtle-bg p-3 rounded-lg min-h-[500px] transition-all"
+                >
+                <div className="font-semibold mb-3 text-text-primary text-center pb-2 border-b-2 border-border-color flex justify-center items-center group relative h-8">
+                    {isEditing ? (
+                        <div className="flex items-center space-x-1 absolute inset-0 bg-subtle-bg">
+                            <input 
+                                type="text" 
+                                value={tempColumnTitle} 
+                                onChange={(e) => setTempColumnTitle(e.target.value)} 
+                                autoFocus
+                                className="w-full text-sm p-1 border rounded"
+                                onKeyDown={(e) => {
+                                    if(e.key === 'Enter') saveColumnTitle(column.id);
+                                    if(e.key === 'Escape') cancelEditingColumn();
+                                }}
+                            />
+                            <button onClick={() => saveColumnTitle(column.id)} className="text-green-600 hover:text-green-800"><SaveIcon size={16}/></button>
+                            <button onClick={cancelEditingColumn} className="text-red-600 hover:text-red-800"><XIcon size={16}/></button>
+                        </div>
+                    ) : (
+                        <>
+                            <span>{columnTitle}</span>
+                            <button 
+                                onClick={() => startEditingColumn(column.id, columnTitle)} 
+                                className="ml-2 text-text-secondary opacity-0 group-hover:opacity-100 hover:text-accent transition-opacity absolute right-0"
+                                title="Renomear coluna"
+                            >
+                                <PencilIcon size={14}/>
+                            </button>
+                        </>
+                    )}
+                </div>
+                {filteredJobs
+                    .filter(job => job.status === column.status)
+                    .map(job => (
+                    <JobCard
+                        key={job.id}
+                        job={job}
+                        client={clients.find(c => c.id === job.clientId)}
+                        currentUser={currentUser}
+                        onClick={() => handleJobClick(job)}
+                        onDragStart={handleDragStart}
+                        onArchive={(e) => { e.stopPropagation(); handleArchiveJob(job.id); }}
+                        onDelete={(e) => { e.stopPropagation(); handleDeleteJob(job.id); }}
+                    />
+                    ))}
+                </div>
+            );
+          })}
         </div>
       ) : (
         <JobListTableView 

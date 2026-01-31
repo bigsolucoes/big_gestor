@@ -1,14 +1,28 @@
+
 import React, { useState, useMemo } from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { useAuth } from '../hooks/useAuth';
-import { Contract } from '../types';
-// Fix: Use the exported 'ContractIcon' alias instead of the non-exported 'FileText'.
-import { ContractIcon, PlusCircleIcon } from '../constants';
+import { Contract, ContractDuration } from '../types';
+import { ContractIcon, PlusCircleIcon, CalendarIcon } from '../constants';
 import Modal from '../components/Modal';
 import ContractForm from './forms/ContractForm';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ContractDetailsPanel from '../components/ContractDetailsPanel';
 import { formatDate } from '../utils/formatters';
+
+const DurationBadge: React.FC<{ duration?: ContractDuration }> = ({ duration }) => {
+    if (!duration || duration === 'Pontual') return null;
+    
+    const colorClass = duration === 'Anual' 
+        ? 'bg-purple-100 text-purple-700 border-purple-200' 
+        : 'bg-blue-100 text-blue-700 border-blue-200'; // Semestral
+
+    return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${colorClass} ml-2`}>
+            <CalendarIcon size={10} className="mr-1"/> {duration}
+        </span>
+    );
+};
 
 const ContractsPage: React.FC = () => {
   const { contracts, clients, loading, contractForDetails, setContractForDetails } = useAppData();
@@ -79,7 +93,10 @@ const ContractsPage: React.FC = () => {
                             <button onClick={() => handleContractClick(contract)} className="w-full text-left p-4 hover:bg-slate-50 transition-colors">
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <p className="font-semibold text-text-primary">{contract.title}</p>
+                                        <p className="font-semibold text-text-primary flex items-center">
+                                            {contract.title}
+                                            <DurationBadge duration={contract.duration} />
+                                        </p>
                                         <p className="text-sm text-text-secondary">{client?.name || 'Cliente desconhecido'} • Criado em: {formatDate(contract.createdAt)}</p>
                                     </div>
                                 </div>

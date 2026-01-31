@@ -1,11 +1,12 @@
+
 import React, { useState, useMemo } from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { useNavigate } from 'react-router-dom';
 import { Job, User } from '../types';
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '../constants';
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, VideoIcon, ClockIcon } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 
-type CalendarViewMode = 'delivery' | 'recording';
+type CalendarViewMode = 'delivery' | 'recording' | 'all';
 
 const TEAM_COLORS = [
     '#3b82f6', // blue-500
@@ -28,12 +29,17 @@ const generateColorForUsername = (username: string, colorMap: React.MutableRefOb
     return color;
 };
 
+interface CalendarEvent {
+    job: Job;
+    type: 'delivery' | 'recording';
+    date: Date;
+}
 
 const CalendarPage: React.FC = () => {
   const { jobs, setJobForDetails, settings } = useAppData();
   const { currentUser } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<CalendarViewMode>('delivery');
+  const [viewMode, setViewMode] = useState<CalendarViewMode>('all');
   const navigate = useNavigate();
   const userColorMap = React.useRef(new Map<string, string>());
 
@@ -70,16 +76,29 @@ const CalendarPage: React.FC = () => {
       const date = new Date(year, currentDate.getMonth(), day);
       date.setHours(0, 0, 0, 0);
 
-      const dayEvents = activeJobs.filter(job => {
-        try {
-            const eventDateStr = viewMode === 'delivery' ? job.deadline : job.recordingDate;
-            if (!eventDateStr) return false;
-            
-            const eventDate = new Date(eventDateStr);
-            const eventDayStart = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-            
-            return eventDayStart.getTime() === date.getTime();
-        } catch(e) { return false; }
+      const dayEvents: CalendarEvent[] = [];
+
+      activeJobs.forEach(job => {
+          // Check Delivery
+          if (viewMode === 'delivery' || viewMode === 'all') {
+              try {
+                  const dDate = new Date(job.deadline);
+                  if (new Date(dDate.getFullYear(), dDate.getMonth(), dDate.getDate()).getTime() === date.getTime()) {
+                      dayEvents.push({ job, type: 'delivery', date: dDate });
+                  }
+              } catch(e) {}
+          }
+          // Check Recording
+          if (viewMode === 'recording' || viewMode === 'all') {
+              try {
+                  if (job.recordingDate) {
+                      const rDate = new Date(job.recordingDate);
+                      if (new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate()).getTime() === date.getTime()) {
+                           dayEvents.push({ job, type: 'recording', date: rDate });
+                      }
+                  }
+              } catch(e) {}
+          }
       });
 
       const today = new Date();
@@ -93,7 +112,8 @@ const CalendarPage: React.FC = () => {
   }, [firstDayOfMonth, daysInMonth, year, currentDate, activeJobs, viewMode]);
   
   const teamLegend = useMemo(() => {
-    if (viewMode !== 'recording' || !currentUser) return null;
+    // Show legend for recording or all, as long as it's not just delivery (personal preference, usually recordings are team based)
+    if (viewMode === 'delivery' || !currentUser) return null;
     const teamMembers = [currentUser.username, ...(settings.teamMembers || [])];
     return teamMembers.map(username => ({
         username,
@@ -106,21 +126,27 @@ const CalendarPage: React.FC = () => {
     navigate('/jobs');
   };
 
-  const EventPill: React.FC<{ job: Job }> = ({ job }) => {
-    const isOwnJob = job.ownerId === currentUser?.id;
-    let pillColor = settings.accentColor || '#1e293b'; // Default to accent color for delivery
-    if (viewMode === 'recording') {
-        pillColor = generateColorForUsername(job.ownerUsername || 'Desconhecido', userColorMap)!;
+  const EventPill: React.FC<{ event: CalendarEvent }> = ({ event }) => {
+    const { job, type } = event;
+    let pillColor = settings.accentColor || '#1e293b'; 
+
+    // For recordings, color by user if possible
+    if (type === 'recording') {
+         pillColor = generateColorForUsername(job.ownerUsername || 'Desconhecido', userColorMap)!;
     }
-    const titlePrefix = viewMode === 'delivery' ? 'Entrega' : `Gravação (${job.ownerUsername})`;
+
+    const Icon = type === 'recording' ? VideoIcon : ClockIcon;
+    const titlePrefix = type === 'delivery' ? 'Entrega' : `Gravação`;
+    
     return (
         <button 
         onClick={() => handleEventClick(job)}
         style={{ backgroundColor: pillColor }}
-        className={`w-full text-left text-white px-1.5 py-0.5 text-xs rounded-sm mb-1 truncate hover:brightness-125 transition-all`}
-        title={`${titlePrefix}: ${job.name} (Clique para ver detalhes)`}
+        className={`w-full text-left text-white px-1.5 py-0.5 text-xs rounded-sm mb-1 truncate hover:brightness-125 transition-all flex items-center gap-1`}
+        title={`${titlePrefix} (${job.ownerUsername}): ${job.name}`}
         >
-        {job.name}
+        <Icon size={10} className="flex-shrink-0" />
+        <span className="truncate">{job.name}</span>
         </button>
     );
   };
@@ -151,9 +177,10 @@ const CalendarPage: React.FC = () => {
             <CalendarIcon size={32} className="text-accent mr-3" />
             <h1 className="text-3xl font-bold text-text-primary">Calendário de Eventos</h1>
         </div>
-        <div className="flex items-center space-x-1 p-1 bg-highlight-bg rounded-lg">
+        <div className="flex items-center space-x-1 p-1 bg-highlight-bg rounded-lg overflow-x-auto max-w-full">
+            <ViewModeButton value="all" currentView={viewMode} onClick={setViewMode}>Todos</ViewModeButton>
             <ViewModeButton value="delivery" currentView={viewMode} onClick={setViewMode}>Entregas</ViewModeButton>
-            <ViewModeButton value="recording" currentView={viewMode} onClick={setViewMode}>Gravações da Equipe</ViewModeButton>
+            <ViewModeButton value="recording" currentView={viewMode} onClick={setViewMode}>Gravações</ViewModeButton>
         </div>
       </div>
 
@@ -172,9 +199,9 @@ const CalendarPage: React.FC = () => {
             </button>
           </div>
           {teamLegend && (
-            <div className="flex items-center space-x-3 mt-2 md:mt-0">
+            <div className="flex items-center space-x-3 mt-2 md:mt-0 overflow-x-auto max-w-full">
                 {teamLegend.map(({ username, color }) => (
-                    <div key={username} className="flex items-center">
+                    <div key={username} className="flex items-center whitespace-nowrap">
                         <span className="w-3 h-3 rounded-full mr-1.5" style={{ backgroundColor: color }}></span>
                         <span className="text-xs font-medium text-text-secondary">{username === currentUser?.username ? 'Você' : username}</span>
                     </div>
@@ -196,7 +223,7 @@ const CalendarPage: React.FC = () => {
                         {cell.day}
                       </span>
                       <div className="mt-1 space-y-0.5 max-h-[90px] overflow-y-auto">
-                        {cell.events?.map(job => <EventPill key={job.id} job={job} />)}
+                        {cell.events?.map((event, idx) => <EventPill key={`${event.job.id}-${idx}`} event={event} />)}
                       </div>
                     </>
                   )}

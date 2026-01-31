@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Job, Client, JobStatus, User } from '../types';
 import { PencilIcon, TrashIcon } from '../constants';
@@ -95,7 +96,10 @@ const JobListTableView: React.FC<JobListTableViewProps> = ({ jobs, clients, curr
 
               return (
                 <tr key={job.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">{job.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
+                    {job.name}
+                    {job.customServiceType && <span className="block text-xs text-text-secondary italic">{job.customServiceType}</span>}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{client?.name || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{job.ownerUsername || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">

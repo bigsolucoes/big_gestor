@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppData } from '../../hooks/useAppData';
 import { Client } from '../../types';
 import toast from 'react-hot-toast';
+import { InstagramIcon, CalendarHeartIcon } from '../../constants';
 
 interface ClientFormProps {
   onSuccess: () => void;
@@ -16,6 +17,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, clientToEdit }) => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [cpf, setCpf] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [birthday, setBirthday] = useState('');
   const [observations, setObservations] = useState('');
 
   useEffect(() => {
@@ -25,6 +28,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, clientToEdit }) => {
       setEmail(clientToEdit.email);
       setPhone(clientToEdit.phone || '');
       setCpf(clientToEdit.cpf || '');
+      setInstagram(clientToEdit.instagram || '');
+      setBirthday(clientToEdit.birthday || '');
       setObservations(clientToEdit.observations || '');
     } else {
       setName('');
@@ -32,6 +37,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, clientToEdit }) => {
       setEmail('');
       setPhone('');
       setCpf('');
+      setInstagram('');
+      setBirthday('');
       setObservations('');
     }
   }, [clientToEdit]);
@@ -60,13 +67,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, clientToEdit }) => {
         return;
     }
 
-
     const clientData = {
       name,
       company: company || undefined,
       email,
       phone: phone || undefined,
       cpf: cpf || undefined,
+      instagram: instagram || undefined,
+      birthday: birthday || undefined,
       observations: observations || undefined,
     };
 
@@ -74,9 +82,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, clientToEdit }) => {
       updateClient({ ...clientToEdit, ...clientData });
       toast.success('Cliente atualizado com sucesso!');
     } else {
-      // For addClient, ensure all potential fields from clientData are passed correctly.
-      // The addClient in useAppData expects Omit<Client, 'id' | 'createdAt'>, 
-      // so clientData matches this structure if we consider cpf and observations optional.
       addClient(clientData);
       toast.success('Cliente adicionado com sucesso!');
     }
@@ -86,7 +91,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, clientToEdit }) => {
   const commonInputClass = "w-full p-2 border border-border-color rounded-md focus:ring-2 focus:ring-custom-brown focus:border-custom-brown text-text-primary outline-none transition-shadow bg-card-bg";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
       <div>
         <label htmlFor="clientName" className="block text-sm font-medium text-text-secondary mb-1">Nome <span className="text-red-500">*</span></label>
         <input type="text" id="clientName" value={name} onChange={(e) => setName(e.target.value)} className={commonInputClass} required />
@@ -99,22 +104,56 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, clientToEdit }) => {
         <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1">Email <span className="text-red-500">*</span></label>
         <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className={commonInputClass} required />
       </div>
-      <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-text-secondary mb-1">Telefone (Opcional)</label>
-        <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className={commonInputClass} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-text-secondary mb-1">Telefone (Opcional)</label>
+            <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className={commonInputClass} />
+        </div>
+        <div>
+            <label htmlFor="cpf" className="block text-sm font-medium text-text-secondary mb-1">CPF (Opcional)</label>
+            <input 
+            type="text" 
+            id="cpf" 
+            value={cpf} 
+            onChange={handleCpfChange} 
+            className={commonInputClass} 
+            placeholder="000.000.000-00"
+            maxLength={14} 
+            />
+        </div>
       </div>
-      <div>
-        <label htmlFor="cpf" className="block text-sm font-medium text-text-secondary mb-1">CPF (Opcional)</label>
-        <input 
-          type="text" 
-          id="cpf" 
-          value={cpf} 
-          onChange={handleCpfChange} 
-          className={commonInputClass} 
-          placeholder="000.000.000-00"
-          maxLength={14} // Length with mask
-        />
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+             <label htmlFor="instagram" className="block text-sm font-medium text-text-secondary mb-1 flex items-center gap-1">
+                <InstagramIcon size={14} /> Instagram (Opcional)
+             </label>
+            <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-secondary text-sm">@</span>
+                <input 
+                    type="text" 
+                    id="instagram" 
+                    value={instagram} 
+                    onChange={(e) => setInstagram(e.target.value.replace('@', ''))} 
+                    className={`${commonInputClass} pl-7`} 
+                    placeholder="usuario"
+                />
+            </div>
+        </div>
+        <div>
+             <label htmlFor="birthday" className="block text-sm font-medium text-text-secondary mb-1 flex items-center gap-1">
+                <CalendarHeartIcon size={14} /> Aniversário (Opcional)
+             </label>
+            <input 
+                type="date" 
+                id="birthday" 
+                value={birthday} 
+                onChange={(e) => setBirthday(e.target.value)} 
+                className={commonInputClass} 
+            />
+        </div>
       </div>
+
       <div>
         <label htmlFor="observations" className="block text-sm font-medium text-text-secondary mb-1">Observações (Opcional)</label>
         <textarea 

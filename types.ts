@@ -1,3 +1,4 @@
+
 export enum ServiceType {
   VIDEO = 'Vídeo',
   PHOTO = 'Fotografia',
@@ -33,6 +34,8 @@ export interface Client {
   email: string;
   phone?: string;
   cpf?: string;
+  instagram?: string; 
+  birthday?: string;  
   observations?: string;
   createdAt: string;
 }
@@ -57,6 +60,8 @@ export interface Task {
   isCompleted: boolean;
 }
 
+export type ContractDuration = 'Pontual' | 'Semestral' | 'Anual';
+
 export interface Contract {
   id: string;
   title: string;
@@ -65,6 +70,8 @@ export interface Contract {
   createdAt: string;
   ownerId: string;
   ownerUsername: string;
+  isSigned: boolean;
+  duration?: ContractDuration; // Novo campo de vigência
 }
 
 export interface Job {
@@ -72,41 +79,95 @@ export interface Job {
   name: string;
   clientId: string;
   serviceType: ServiceType;
+  customServiceType?: string; // Novo campo para texto livre quando ServiceType for OTHER
   value: number;
-  cost?: number; // New for profitability tracking
+  cost?: number;
   deadline: string; // ISO string date
   recordingDate?: string; // ISO string date and time
   status: JobStatus;
-  cloudLinks?: string[]; 
+  cloudLinks?: string[];
   createdAt: string;
-  notes?: string; // General job notes
+  notes?: string;
   isDeleted?: boolean;
   observationsLog?: JobObservation[];
-  payments: Payment[]; // Replaces all old payment fields
+  payments: Payment[];
   isRecurring?: boolean;
   createCalendarEvent?: boolean;
-  tasks: Task[]; // New for checklist
-  linkedContractId?: string; // New for linking contracts
-  linkedDraftIds: string[]; // New for linking drafts
-  ownerId?: string; // User ID of the job creator
-  ownerUsername?: string; // Username of the job creator
-  isTeamJob?: boolean; // Flag to share job with team in Kanban/List
+  tasks: Task[];
+  financialTasks?: Task[]; 
+  linkedContractId?: string;
+  linkedDraftIds: string[];
+  ownerId?: string;
+  ownerUsername?: string;
+  isTeamJob?: boolean;
 }
 
 export enum FinancialJobStatus {
-  PENDING_DEPOSIT = 'Aguardando Entrada',
-  PARTIALLY_PAID = 'Parcialmente Pago',
-  PENDING_FULL_PAYMENT = 'Aguardando Pagamento',
-  PAID = 'Pago',
-  OVERDUE = 'Atrasado',
+  PENDING_DEPOSIT = 'PENDING_DEPOSIT',
+  PARTIALLY_PAID = 'PARTIALLY_PAID',
+  PENDING_FULL_PAYMENT = 'PENDING_FULL_PAYMENT',
+  PAID = 'PAID',
+  OVERDUE = 'OVERDUE'
 }
 
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+}
 
-export interface FinancialRecord extends Job {
-  financialStatus: FinancialJobStatus;
-  clientName?: string;
-  totalPaid: number;
-  remaining: number;
+export interface AppSettings {
+  asaasUrl?: string;
+  customLinkTitle?: string; // Título do botão personalizado
+  userName?: string;
+  primaryColor: string;
+  accentColor: string;
+  splashScreenBackgroundColor: string;
+  privacyModeEnabled?: boolean;
+  teamMembers?: string[];
+  kanbanColumns?: { [key: string]: string }; // Mapa de status para nome personalizado
+  theme: 'light' | 'dark';
+}
+
+export interface ScriptLine {
+  id: string;
+  scene: string;
+  description: string;
+  duration: number; // seconds
+}
+
+export interface Attachment {
+  id: string;
+  name: string;
+  dataUrl: string;
+}
+
+export interface DraftNote {
+  id: string;
+  title: string;
+  type: 'TEXT' | 'SCRIPT';
+  content?: string;
+  scriptLines?: ScriptLine[];
+  attachments?: Attachment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface License {
+  key: string;
+  status: 'active' | 'used' | 'revoked'; // Added revoked
+  createdAt: string;
+  createdBy: string;
+  usedBy?: string;
+  usedAt?: string;
+}
+
+export interface BugReport {
+  id: string;
+  reporter: string;
+  description: string;
+  timestamp: string;
+  status: 'open' | 'resolved';
 }
 
 export interface AIChatMessage {
@@ -114,66 +175,24 @@ export interface AIChatMessage {
   text: string;
   sender: 'user' | 'ai';
   timestamp: string;
-  relatedData?: unknown;
 }
 
 export interface GroundingChunk {
   web?: {
-    uri: string;
-    title: string;
+    uri?: string;
+    title?: string;
   };
   retrievedContext?: {
-    uri: string;
-    title: string;
+    uri?: string;
+    title?: string;
   };
-}
-
-export interface AppSettings {
-  asaasUrl?: string;
-  userName?: string; // This is for display name in dashboard, not auth username
-  primaryColor?: string;
-  accentColor?: string;
-  splashScreenBackgroundColor?: string;
-  privacyModeEnabled?: boolean; 
-  teamMembers?: string[]; // Usernames of team members
-  theme?: 'light' | 'dark';
-}
-
-export interface User {
-  id:string;
-  username: string; 
-  email: string;
-}
-
-export interface ScriptLine {
-  id: string;
-  scene: string;
-  description: string;
-  duration: number; // in seconds
-}
-
-export interface Attachment {
-  id: string;
-  name: string;
-  dataUrl: string; // base64
-}
-
-export interface DraftNote {
-  id: string;
-  title: string;
-  type: 'TEXT' | 'SCRIPT';
-  content: string; 
-  scriptLines: ScriptLine[];
-  attachments: Attachment[];
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Notification {
   id: string;
-  type: 'deadline' | 'overdue' | 'event' | 'client';
+  type: 'deadline' | 'overdue' | 'client' | 'birthday';
   message: string;
   linkTo: string;
   isRead: boolean;
-  entityId: string; // ID of the job or client
+  entityId: string;
 }

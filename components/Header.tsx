@@ -1,17 +1,19 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useAppData';
 import { useAuth } from '../hooks/useAuth'; 
-import { APP_NAME, SettingsIcon, EyeOpenIcon, EyeClosedIcon, LogOutIcon, BellIcon, LOGO_LIGHT_THEME_BASE64, LOGO_DARK_THEME_BASE64 } from '../constants';
+import { APP_NAME, SettingsIcon, EyeOpenIcon, EyeClosedIcon, LogOutIcon, BellIcon, LOGO_LIGHT_THEME_BASE64, LOGO_DARK_THEME_BASE64, ListBulletIcon } from '../constants';
 import { Notification } from '../types';
 import NotificationsPanel from './NotificationsPanel';
 
 interface HeaderProps {
     notifications: Notification[];
     markNotificationsAsRead: (notificationId: string) => void;
+    onToggleMobileMenu: () => void; // New prop
 }
 
-const Header: React.FC<HeaderProps> = ({ notifications, markNotificationsAsRead }) => {
+const Header: React.FC<HeaderProps> = ({ notifications, markNotificationsAsRead, onToggleMobileMenu }) => {
   const { settings, updateSettings } = useAppData();
   const { currentUser, logout } = useAuth(); 
   const navigate = useNavigate();
@@ -49,19 +51,29 @@ const Header: React.FC<HeaderProps> = ({ notifications, markNotificationsAsRead 
   }, [panelRef]);
 
   return (
-    <header className="bg-card-bg text-text-primary py-4 px-6 sm:px-8 shadow-md flex justify-between items-center h-20 sticky top-0 z-30">
-      {/* Logo on the left */}
-      <div 
-        onClick={handleLogoClick}
-        className="cursor-pointer flex items-center"
-        title="Ir para a tela de descanso"
-      >
-        <img src={LOGO_LIGHT_THEME_BASE64} alt={`${APP_NAME} Logo`} className="logo-light h-12 max-h-full max-w-xs object-contain" />
-        <img src={LOGO_DARK_THEME_BASE64} alt={`${APP_NAME} Logo`} className="logo-dark h-12 max-h-full max-w-xs object-contain" />
+    <header className="bg-card-bg text-text-primary py-4 px-4 sm:px-8 shadow-md flex justify-between items-center h-20 sticky top-0 z-30 select-none">
+      <div className="flex items-center">
+        {/* Mobile Menu Button */}
+        <button 
+            onClick={onToggleMobileMenu}
+            className="mr-3 md:hidden p-2 text-text-secondary hover:text-text-primary hover:bg-hover-bg rounded-lg"
+        >
+            <ListBulletIcon size={24} />
+        </button>
+
+        {/* Logo */}
+        <div 
+            onClick={handleLogoClick}
+            className="cursor-pointer flex items-center"
+            title="Ir para a tela de descanso"
+        >
+            <img src={LOGO_LIGHT_THEME_BASE64} alt={`${APP_NAME} Logo`} className="logo-light h-10 sm:h-12 max-h-full max-w-[150px] object-contain" />
+            <img src={LOGO_DARK_THEME_BASE64} alt={`${APP_NAME} Logo`} className="logo-dark h-10 sm:h-12 max-h-full max-w-[150px] object-contain" />
+        </div>
       </div>
 
       {/* Icons on the right */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-1 sm:space-x-3">
         <div className="relative" ref={panelRef}>
             <button
                 onClick={() => setIsPanelOpen(prev => !prev)}
@@ -84,11 +96,13 @@ const Header: React.FC<HeaderProps> = ({ notifications, markNotificationsAsRead 
 
         <button
           onClick={togglePrivacyMode}
-          className="p-2 text-text-secondary hover:text-accent transition-colors"
+          className="p-2 text-text-secondary hover:text-accent transition-colors hidden sm:block"
           title={settings.privacyModeEnabled ? "Mostrar Valores Monetários" : "Ocultar Valores Monetários"}
         >
           {settings.privacyModeEnabled ? <EyeClosedIcon size={20} /> : <EyeOpenIcon size={20} />}
         </button>
+        
+        {/* Updated: Removed 'hidden sm:block' to show on mobile */}
         <Link 
           to="/settings" 
           className="p-2 text-text-secondary hover:text-accent transition-colors"
@@ -96,6 +110,7 @@ const Header: React.FC<HeaderProps> = ({ notifications, markNotificationsAsRead 
         >
           <SettingsIcon size={20} />
         </Link>
+        
         <button
           onClick={logout}
           className="p-2 text-text-secondary hover:text-red-500 transition-colors"

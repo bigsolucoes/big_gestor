@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAppData } from './useAppData';
 import { Notification, JobStatus } from '../types';
@@ -66,19 +67,54 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       }
     });
 
-    // 2. Inactive Client Notifications
+    // 2. Client Notifications (Inactive & Birthday)
     const sixtyDaysAgo = new Date(today);
     sixtyDaysAgo.setDate(today.getDate() - 60);
+    
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setDate(today.getDate() - 365);
 
     clients.forEach(client => {
-      const clientJobs = jobs.filter(j => j.clientId === client.id);
+      // 2a. Birthday
+      if (client.birthday) {
+          try {
+              const [bYear, bMonth, bDay] = client.birthday.split('-').map(Number);
+              // Month is 0-indexed in JS Date
+              if (today.getDate() === bDay && today.getMonth() === (bMonth - 1)) {
+                  generatedNotifications.push({
+                    id: `bday-${client.id}-${today.getFullYear()}`,
+                    type: 'birthday',
+                    message: `Hoje é o aniversário de ${client.name}! 🎉`,
+                    linkTo: `/clients/${client.id}`,
+                    isRead: false,
+                    entityId: client.id
+                  });
+              }
+          } catch(e) {}
+      }
+
+      // 2b. Inactivity
+      const clientJobs = jobs.filter(j => j.clientId === client.id && !j.isDeleted);
       if (clientJobs.length > 0) {
         const mostRecentJobDate = new Date(
           Math.max(...clientJobs.map(j => new Date(j.createdAt).getTime()))
         );
-        if (mostRecentJobDate < sixtyDaysAgo) {
+        
+        // 1 Year Inactive (Priority)
+        if (mostRecentJobDate < oneYearAgo) {
+            generatedNotifications.push({
+                id: `client-1yr-${client.id}`,
+                type: 'client',
+                message: `O cliente "${client.name}" não contrata nada há 1 ANO. Hora de reativar contato?`,
+                linkTo: `/clients/${client.id}`,
+                isRead: false,
+                entityId: client.id,
+              });
+        } 
+        // 60 Days Inactive (Lower Priority, only show if not 1 year)
+        else if (mostRecentJobDate < sixtyDaysAgo) {
           generatedNotifications.push({
-            id: `client-${client.id}`,
+            id: `client-60d-${client.id}`,
             type: 'client',
             message: `O cliente "${client.name}" não tem novos jobs há mais de 60 dias.`,
             linkTo: `/clients/${client.id}`,

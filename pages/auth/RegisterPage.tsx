@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppData } from '../../hooks/useAppData';
-import { APP_NAME, ExclamationCircleIcon, LOGO_LIGHT_THEME_BASE64, LOGO_DARK_THEME_BASE64 } from '../../constants';
+import { APP_NAME, ExclamationCircleIcon, LOGO_LIGHT_THEME_BASE64, LOGO_DARK_THEME_BASE64, KeyIcon } from '../../constants';
 import toast from 'react-hot-toast';
 
 const RegisterPage: React.FC = () => {
@@ -10,6 +11,7 @@ const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [licenseKey, setLicenseKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { register } = useAuth();
@@ -37,10 +39,14 @@ const RegisterPage: React.FC = () => {
       setError('Formato de email inválido.');
       return;
     }
+    if (!licenseKey.trim()) {
+        setError('A Chave de Licença é obrigatória.');
+        return;
+    }
 
     setIsLoading(true);
     setError(null);
-    const errorMessage = await register(username, email, password);
+    const errorMessage = await register(username, email, password, licenseKey.trim());
     setIsLoading(false);
 
     if (errorMessage) {
@@ -66,7 +72,7 @@ const RegisterPage: React.FC = () => {
           <img src={LOGO_LIGHT_THEME_BASE64} alt={`${APP_NAME} Logo`} className="logo-light h-12 sm:h-16 mx-auto mb-2 object-contain" />
           <img src={LOGO_DARK_THEME_BASE64} alt={`${APP_NAME} Logo`} className="logo-dark h-12 sm:h-16 mx-auto mb-2 object-contain" />
           <h2 className="text-xl sm:text-2xl font-semibold text-text-primary">Crie sua Conta</h2>
-          <p className="text-text-secondary">Comece a gerenciar seus projetos de forma inteligente.</p>
+          <p className="text-text-secondary">Acesso restrito para convidados.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-card-bg shadow-xl rounded-xl p-6 sm:p-8 space-y-4">
@@ -78,8 +84,25 @@ const RegisterPage: React.FC = () => {
             </div>
           )}
 
+           <div>
+            <label htmlFor="licenseKey" className="block text-sm font-medium text-text-secondary mb-1 flex items-center gap-1">
+                <KeyIcon size={14} className="text-accent" /> Chave de Licença (Convite)
+            </label>
+            <input
+              type="text"
+              id="licenseKey"
+              value={licenseKey}
+              onChange={(e) => { setLicenseKey(e.target.value); setError(null); }}
+              className={commonInputClass}
+              placeholder="XXXX-XXXX-XXXX"
+              required
+              disabled={isLoading}
+              autoComplete="off"
+            />
+          </div>
+
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-1">Usuário (mín. 3 caracteres, letras, números, _)</label>
+            <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-1">Usuário (mín. 3 caracteres)</label>
             <input
               type="text"
               id="username"

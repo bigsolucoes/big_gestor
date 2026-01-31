@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { Job, JobStatus } from '../types';
@@ -98,7 +97,10 @@ const ArchivePage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                         {formatDate(lastPaymentDate, { dateStyle: 'short', timeStyle: 'short' })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{job.serviceType}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                        {job.serviceType}
+                        {job.customServiceType && <span className="block text-xs text-text-secondary italic">{job.customServiceType}</span>}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                           <button
                             onClick={() => handleUnarchive(job.id)}

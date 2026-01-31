@@ -1,16 +1,15 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User } from '../types';
+import { User, License } from '../types';
 import { useNavigate } from 'react-router-dom';
 import * as blobService from '../services/blobStorageService';
 import { supabase, isPersistenceEnabled } from '../services/blobStorageService';
-// Fix: Use `import type` for importing types to resolve module resolution issues with Supabase.
-// import type { User as SupabaseUser, AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   login: (username: string, pass: string) => Promise<string | null>;
-  register: (username: string, email: string, pass: string) => Promise<string | null>;
+  register: (username: string, email: string, pass: string, licenseKey: string) => Promise<string | null>;
   logout: () => void;
   changePassword: (oldPass: string, newPass: string) => Promise<string | null>;
 }
@@ -19,7 +18,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const SYSTEM_USER_ID = 'system_data';
 
 // Maps a Supabase user to our application's User type
-// FIX: Using `any` for supabaseUser as type is not available for import in Supabase v1 style.
 const mapSupabaseUserToAppUser = (supabaseUser: any): User => {
     return {
         id: supabaseUser.id,
@@ -34,7 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If Supabase is configured, use the real authentication flow.
+    // 1. Supabase Mode
     if (supabase && isPersistenceEnabled) {
         const { data: authStateListener } = supabase.auth.onAuthStateChange((_event, session) => {
           const supabaseUser = session?.user;
@@ -50,110 +48,205 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           authStateListener?.subscription.unsubscribe();
         };
     } else {
-        // If Supabase is NOT configured, block access by default.
-        console.warn("Auth service not configured. App will require login, but it will fail.");
-        setCurrentUser(null);
+        // 2. Offline/Demo Mode
+        // Check if there is a 'mock' session in localStorage
+        const storedUser = localStorage.getItem('big_offline_user_session');
+        if (storedUser) {
+            setCurrentUser(JSON.parse(storedUser));
+        }
         setLoading(false);
     }
   }, []);
 
+  const checkLicenseValidity = async (username: string): Promise<string | null> => {
+      // Admin bypass
+      if (username.toLowerCase() === 'luizmellol') return null;
+
+      try {
+          const licenses = await blobService.get<License[]>(SYSTEM_USER_ID, 'licenses') || [];
+          const userLicense = licenses.find(l => l.usedBy === username);
+          
+          if (userLicense && userLicense.status === 'revoked') {
+              return "Seu acesso a este sistema foi revogado pelo administrador. Entre em contato para regularizar.";
+          }
+      } catch (e) {
+          console.error("Error checking license validity", e);
+      }
+      return null;
+  };
+
   const login = useCallback(async (emailOrUsername: string, pass: string): Promise<string | null> => {
-    if (!supabase) return "Serviço de autenticação indisponível.";
-    
+    // --- OFFLINE / DEMO LOGIN LOGIC ---
+    if (!supabase) {
+        // Allow the specific user credentials mentioned
+        // Also allow generic admin/admin for easy testing
+        if (
+            (emailOrUsername.toLowerCase() === 'luizmellol' && pass === 'big123') ||
+            (emailOrUsername.toLowerCase() === 'admin' && pass === 'admin')
+        ) {
+            const mockUser: User = {
+                id: emailOrUsername.toLowerCase() === 'luizmellol' ? 'user-luiz-id' : 'user-admin-id',
+                username: emailOrUsername,
+                email: emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@demo.com`
+            };
+            
+            // Check license for offline mock users if applicable (though usually manual in code)
+            const licenseError = await checkLicenseValidity(mockUser.username);
+            if (licenseError) return licenseError;
+
+            setCurrentUser(mockUser);
+            localStorage.setItem('big_offline_user_session', JSON.stringify(mockUser));
+            return null;
+        }
+        
+        // Also allow login if the user was "registered" locally
+        const localUsers = await blobService.get<any[]>(SYSTEM_USER_ID, 'offline_users') || [];
+        const found = localUsers.find(u => (u.username === emailOrUsername || u.email === emailOrUsername) && u.password === pass);
+        if (found) {
+             const licenseError = await checkLicenseValidity(found.username);
+             if (licenseError) return licenseError;
+
+             const mockUser: User = { id: found.id, username: found.username, email: found.email };
+             setCurrentUser(mockUser);
+             localStorage.setItem('big_offline_user_session', JSON.stringify(mockUser));
+             return null;
+        }
+
+        return "Usuário offline não encontrado ou senha incorreta (Tente: luizmellol / big123)";
+    }
+
+    // --- SUPABASE LOGIN LOGIC ---
     let email = emailOrUsername;
-    // Check if user provided a username instead of an email
+    let targetUsername = '';
+
     if (!emailOrUsername.includes('@')) {
         const storedUsers = await blobService.get<User[]>(SYSTEM_USER_ID, 'users') || [];
         const foundUser = storedUsers.find(u => u.username.toLowerCase() === emailOrUsername.toLowerCase());
         if (foundUser) {
             email = foundUser.email;
+            targetUsername = foundUser.username;
         } else {
             return "Usuário não encontrado.";
         }
+    } else {
+        // If logging in with email, find the username to check license
+        const storedUsers = await blobService.get<User[]>(SYSTEM_USER_ID, 'users') || [];
+        const foundUser = storedUsers.find(u => u.email.toLowerCase() === emailOrUsername.toLowerCase());
+        if (foundUser) targetUsername = foundUser.username;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    // 1. Authenticate with Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: pass,
     });
     
-    return error ? "Email ou senha inválidos." : null;
+    if (error) return "Email ou senha inválidos.";
+
+    // 2. If valid auth, CHECK LICENSE STATUS
+    if (data.user) {
+        // Fallback: if we didn't find username from public list, try metadata from auth response
+        if (!targetUsername) targetUsername = data.user.user_metadata.username || '';
+        
+        const licenseError = await checkLicenseValidity(targetUsername);
+        if (licenseError) {
+            await supabase.auth.signOut(); // Force logout
+            return licenseError;
+        }
+    }
+    
+    return null;
   }, []);
 
-  const register = useCallback(async (username: string, email: string, pass:string): Promise<string | null> => {
-    if (!supabase) return "Serviço de autenticação indisponível.";
+  const register = useCallback(async (username: string, email: string, pass:string, licenseKey: string): Promise<string | null> => {
+    
+    // --- OFFLINE / DEMO REGISTER LOGIC ---
+    if (!supabase) {
+        const newUser = { id: `user-${Date.now()}`, username, email, password: pass };
+        const localUsers = await blobService.get<any[]>(SYSTEM_USER_ID, 'offline_users') || [];
+        
+        if (localUsers.find(u => u.username === username)) return "Usuário já existe.";
+        
+        await blobService.set(SYSTEM_USER_ID, 'offline_users', [...localUsers, newUser]);
+        
+        // Auto login
+        const userObj: User = { id: newUser.id, username, email };
+        setCurrentUser(userObj);
+        localStorage.setItem('big_offline_user_session', JSON.stringify(userObj));
+        return null;
+    }
 
-    // 1. Check if username is already taken from our public list
+    // --- SUPABASE REGISTER LOGIC ---
+    // 1. License Check
+    const licenses = await blobService.get<License[]>(SYSTEM_USER_ID, 'licenses') || [];
+    const validLicense = licenses.find(l => l.key === licenseKey && l.status === 'active');
     const storedUsers = await blobService.get<User[]>(SYSTEM_USER_ID, 'users') || [];
+    const isFirstUser = storedUsers.length === 0;
+    const isAdminUser = username.toLowerCase() === 'luizmellol';
+
+    if (!validLicense && !isFirstUser && !isAdminUser) {
+        return "Chave de licença inválida ou já utilizada.";
+    }
+
+    // 2. Check username
     if (storedUsers.some(u => u.username.toLowerCase() === username.toLowerCase())) {
         return "Este nome de usuário já está em uso.";
     }
 
-    // 2. Sign up the user with Supabase Auth
+    // 3. Sign up
     const { data: { user } , error: signUpError } = await supabase.auth.signUp({
       email: email, 
       password: pass,
-      options: {
-        data: { username: username }
-      }
+      options: { data: { username: username } }
     });
 
-    if (signUpError) {
-        if (signUpError.message.includes("User already registered")) {
-            return "Este email já está cadastrado.";
-        }
-        return "Erro ao registrar. Tente novamente.";
-    }
-
-    if (!user) {
-        return "Não foi possível criar o usuário. Tente novamente.";
-    }
+    if (signUpError) return "Erro ao registrar.";
+    if (!user) return "Erro inesperado.";
     
-    // 3. Add the new user to the public 'users.json' list for the team feature
-    const newUserForPublicList: User = { id: user.id, username, email };
-    const updatedUsers = [...storedUsers, newUserForPublicList];
-    await blobService.set(SYSTEM_USER_ID, 'users', updatedUsers);
+    // 4. Update License
+    if (validLicense) {
+        const updatedLicenses = licenses.map(l => l.key === validLicense.key ? {
+            ...l, status: 'used' as const, usedBy: username, usedAt: new Date().toISOString()
+        } : l);
+        await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
+    }
 
-    // onAuthStateChange will handle setting the currentUser state
-    return null; // Success
+    // 5. Add to public list
+    const newUserForPublicList: User = { id: user.id, username, email };
+    await blobService.set(SYSTEM_USER_ID, 'users', [...storedUsers, newUserForPublicList]);
+
+    return null; 
   }, []);
 
   const logout = useCallback(async () => {
-    if (!supabase || !isPersistenceEnabled) {
-        // In no-auth mode, logout is not meaningful. Reloading can serve as a "reset".
-        window.location.reload();
-        return;
+    localStorage.removeItem('big_offline_user_session');
+    
+    if (supabase) {
+        await supabase.auth.signOut();
     }
-    await supabase.auth.signOut();
+    
     setCurrentUser(null);
     sessionStorage.removeItem('brandingSplashShown');
     navigate('/login', { replace: true });
   }, [navigate]);
 
   const changePassword = useCallback(async (oldPass: string, newPass: string): Promise<string | null> => {
-    if (!supabase || !currentUser) return "Usuário não autenticado.";
+    if (!currentUser) return "Não autenticado";
+    
+    if (!supabase) {
+        return "Alteração de senha não disponível no modo Offline.";
+    }
 
-    // 1. Verify the old password by attempting to sign in.
-    // This is a client-side pattern to re-authenticate for sensitive actions.
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: currentUser.email,
       password: oldPass,
     });
 
-    if (signInError) {
-      return "A senha antiga está incorreta.";
-    }
+    if (signInError) return "Senha antiga incorreta.";
 
-    // 2. If the old password is correct, update to the new password.
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPass,
-    });
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPass });
     
-    if (updateError) {
-        return `Erro ao atualizar a senha. Tente novamente.`;
-    }
-
-    return null; // Success
+    return updateError ? "Erro ao atualizar senha." : null;
   }, [currentUser]);
 
 
