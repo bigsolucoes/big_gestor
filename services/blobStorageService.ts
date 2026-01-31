@@ -13,7 +13,13 @@ const initializeBucket = async () => {
   
   try {
     // Check if bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.warn('[SupabaseService] Could not list buckets:', listError);
+      return;
+    }
+    
     const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
     
     if (!bucketExists) {
@@ -26,8 +32,25 @@ const initializeBucket = async () => {
       
       if (error) {
         console.warn('[SupabaseService] Could not create bucket:', error);
+        console.info('[SupabaseService] Falling back to localStorage for storage');
       } else {
         console.log('[SupabaseService] Bucket created successfully');
+        
+        // Set up RLS policies for the bucket
+        try {
+          // This would typically be done in Supabase dashboard, but we try anyway
+          const { error: policyError } = await supabase.rpc('create_storage_policy', {
+            bucket_name: BUCKET_NAME,
+            policy_name: 'Allow authenticated users',
+            definition: 'authenticated()'
+          });
+          
+          if (policyError) {
+            console.warn('[SupabaseService] Could not set up storage policies (configure manually in Supabase dashboard):', policyError);
+          }
+        } catch (policyErr) {
+          console.warn('[SupabaseService] Policy setup failed (configure manually in Supabase dashboard)');
+        }
       }
     }
   } catch (error) {
@@ -76,17 +99,18 @@ export const get = async <T>(userId: string, key: string): Promise<T | null> => 
       const { data: blob, error } = await supabase.storage.from(BUCKET_NAME).download(filePath);
 
       if (error) {
-        if (error.message === 'The resource was not found') return null;
-        throw error;
-      }
-
-      if (blob) {
+        if (error.message === 'The resource was not found') {
+          console.log(`[SupabaseService] File not found: ${filePath}, trying localStorage`);
+        } else {
+          console.warn(`[SupabaseService] Error getting data:`, error);
+        }
+        // Fall through to localStorage
+      } else if (blob) {
         const text = await blob.text();
         return JSON.parse(text) as T;
       }
     } catch (error) {
-      console.error(`[SupabaseService] Error getting data:`, error);
-      return null;
+      console.warn(`[SupabaseService] Error getting data:`, error);
     }
   }
 
@@ -94,10 +118,11 @@ export const get = async <T>(userId: string, key: string): Promise<T | null> => 
   try {
     const localData = localStorage.getItem(getLocalKey(userId, key));
     if (localData) {
+        console.log(`[SupabaseService] Using localStorage for: ${key}`);
         return JSON.parse(localData) as T;
     }
   } catch (e) {
-      console.error("Error reading from LocalStorage", e);
+    console.error("Error reading from LocalStorage", e);
   }
   return null;
 };
@@ -119,22 +144,24 @@ export const set = async (userId: string, key: string, data: unknown): Promise<v
           upsert: true,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.warn(`[SupabaseService] Error setting data, falling back to localStorage:`, error);
+        // Fall through to localStorage
+      } else {
+        console.log(`[SupabaseService] Successfully saved to Supabase: ${key}`);
+        return; // Success, don't save to localStorage
+      }
     } catch (error) {
-      console.error(`[SupabaseService] Error setting data:`, error);
-      // If upload fails, we don't fallback to local storage to avoid data sync mismatch states,
-      // but in a hybrid app you might. Here we just throw.
-      throw error;
+      console.warn(`[SupabaseService] Error setting data:`, error);
     }
   } 
   
-  // 2. Always save to LocalStorage as well (or as fallback)
-  else {
-      try {
-          localStorage.setItem(getLocalKey(userId, key), jsonString);
-      } catch (e) {
-          console.error("Error saving to LocalStorage", e);
-      }
+  // 2. Always save to LocalStorage as fallback
+  try {
+      localStorage.setItem(getLocalKey(userId, key), jsonString);
+      console.log(`[SupabaseService] Saved to localStorage: ${key}`);
+  } catch (e) {
+      console.error("Error saving to LocalStorage", e);
   }
 };
 
