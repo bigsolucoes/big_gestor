@@ -8,6 +8,7 @@ import JobsPage from './pages/JobsPage';
 import ClientsPage from './pages/ClientsPage';
 import ClientDetailPage from './pages/ClientDetailPage'; 
 import ContractsPage from './pages/ContractsPage';
+import EnhancedContractsPage from './pages/EnhancedContractsPage';
 import FinancialsPage from './pages/FinancialsPage';
 import PerformancePage from './pages/PerformancePage';
 import CommunicationPage from './pages/CommunicationPage';
@@ -21,6 +22,7 @@ import ArchivePage from './pages/ArchivePage';
 import DraftsPage from './pages/DraftsPage';
 import RestPage from './pages/RestPage';
 import ProposalsPage from './pages/ProposalsPage';
+import EnhancedProposalsPage from './pages/EnhancedProposalsPage';
 import { useAppData } from './hooks/useAppData';
 import { useAuth } from './hooks/useAuth';
 import { Toaster } from 'react-hot-toast';
@@ -79,7 +81,8 @@ const MainLayout: React.FC = () => {
             <Route path="/jobs" element={<JobsPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/clients/:clientId" element={<ClientDetailPage />} /> 
-            <Route path="/contracts" element={<ContractsPage />} />
+            <Route path="/contracts" element={<EnhancedContractsPage />} />
+            <Route path="/contracts-old" element={<ContractsPage />} />
             <Route path="/financials" element={<FinancialsPage />} />
             <Route path="/performance" element={<PerformancePage />} />
             <Route path="/calendar" element={<CalendarPage />} />
@@ -88,7 +91,8 @@ const MainLayout: React.FC = () => {
             <Route path="/communication" element={<CommunicationPage />} />
             <Route path="/ai-assistant" element={<AIAssistantPage />} />
             <Route path="/rest" element={<RestPage />} />
-            <Route path="/proposals" element={<ProposalsPage />} />
+            <Route path="/proposals" element={<EnhancedProposalsPage />} />
+            <Route path="/proposals-old" element={<ProposalsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -118,7 +118,76 @@ export enum FinancialJobStatus {
   OVERDUE = 'OVERDUE'
 }
 
-// Proposal System Types
+// Enhanced Contract System Types
+export interface ContractTemplate {
+  id: string;
+  name: string;
+  serviceType: ServiceType;
+  content: string;
+  isDefault: boolean;
+  isBuiltIn: boolean; // Built-in templates vs user-created
+  createdAt: string;
+  usageCount: number;
+}
+
+export interface ContractPreset {
+  id: string;
+  name: string;
+  description: string;
+  serviceType: ServiceType;
+  clauses: ContractClause[];
+  customizations: {
+    paymentMethod: string;
+    warrantyPeriod: string;
+    revisionCount: number;
+    deliveryFormat: string;
+  };
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface ContractClause {
+  id: string;
+  title: string;
+  content: string;
+  isRequired: boolean;
+  category: 'payment' | 'delivery' | 'warranty' | 'confidentiality' | 'termination' | 'custom';
+}
+
+export interface ContractGenerationOptions {
+  template: ContractTemplate;
+  customizations: {
+    includeClientData: boolean;
+    includePaymentSchedule: boolean;
+    includeWarranty: boolean;
+    includeSpecificClauses: string[];
+  };
+}
+
+// Enhanced Proposal System with Pre-Registration
+export interface PreClient {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  status: 'pre-registered' | 'registered' | 'rejected';
+  proposalId?: string;
+  createdAt: string;
+  registeredAt?: string;
+}
+
+export interface EnhancedProposal extends Proposal {
+  preClientId?: string;
+  preRegistrationData?: {
+    clientName: string;
+    clientEmail?: string;
+    clientPhone?: string;
+    clientCompany?: string;
+  };
+  autoRegisterOnApproval: boolean;
+  kanbanStatus?: 'pre-client' | 'contacting' | 'proposal-sent' | 'approved' | 'rejected';
+}
 export interface Proposal {
   id: string;
   title: string;
