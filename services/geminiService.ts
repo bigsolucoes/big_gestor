@@ -14,6 +14,22 @@ if (!API_KEY) {
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 const MODEL_NAME = 'gemini-1.5-flash';
 
+// Simple rate limiter to avoid quota exceeded
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between requests
+
+const waitForRateLimit = async () => {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+  
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    const waitTime = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  lastRequestTime = Date.now();
+};
+
 interface AppContextData {
   jobs: Job[];
   clients: Client[];
@@ -166,6 +182,9 @@ export const callGeminiApi = async (
   const prompt = `${dataContext}\nSolicitação do Usuário: ${userQuery}`;
   
   try {
+    // Wait for rate limit before making request
+    await waitForRateLimit();
+    
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: prompt,
@@ -222,6 +241,9 @@ export const generateContractContent = async (job: Job, client: Client): Promise
     `;
 
     try {
+        // Wait for rate limit before making request
+        await waitForRateLimit();
+        
         const response = await ai.models.generateContent({
             model: MODEL_NAME,
             contents: prompt,

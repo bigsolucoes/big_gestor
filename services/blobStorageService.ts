@@ -5,6 +5,36 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+const BUCKET_NAME = 'user-data';
+
+// Initialize bucket if it doesn't exist
+const initializeBucket = async () => {
+  if (!supabase) return;
+  
+  try {
+    // Check if bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
+    
+    if (!bucketExists) {
+      // Create the bucket if it doesn't exist
+      const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
+        public: false,
+        allowedMimeTypes: ['application/json'],
+        fileSizeLimit: 1048576, // 1MB
+      });
+      
+      if (error) {
+        console.warn('[SupabaseService] Could not create bucket:', error);
+      } else {
+        console.log('[SupabaseService] Bucket created successfully');
+      }
+    }
+  } catch (error) {
+    console.warn('[SupabaseService] Bucket initialization failed:', error);
+  }
+};
+
 export let supabase: SupabaseClient | null = null;
 export let isPersistenceEnabled = false;
 
@@ -14,6 +44,9 @@ if (supabaseUrl && supabaseAnonKey) {
     supabase = createClient(supabaseUrl, supabaseAnonKey);
     isPersistenceEnabled = true;
     console.log("[SupabaseService] Persistence is enabled via Supabase.");
+    
+    // Initialize bucket after client is created
+    initializeBucket();
   } catch (error) {
     console.error("[SupabaseService] Error initializing Supabase client:", error);
     isPersistenceEnabled = false;
@@ -22,8 +55,6 @@ if (supabaseUrl && supabaseAnonKey) {
   console.warn("[SupabaseService] Running in LocalStorage Mode (Offline).");
   isPersistenceEnabled = false; 
 }
-
-const BUCKET_NAME = 'user-data';
 
 const getFilePath = (userId: string, key: string): string => {
   return `${userId}/${key}.json`;
