@@ -85,6 +85,7 @@ export const NAVIGATION_ITEMS = [
   { name: 'Dashboard', path: '/dashboard', icon: HomeIcon },
   { name: 'Jobs', path: '/jobs', icon: BriefcaseIcon },
   { name: 'Clientes', path: '/clients', icon: UsersIcon },
+  { name: 'Propostas', path: '/proposals', icon: ContractIcon },
   { name: 'Contratos', path: '/contracts', icon: ContractIcon },
   { name: 'Financeiro', path: '/financials', icon: CreditCardIcon },
   { name: 'Calendário', path: '/calendar', icon: CalendarIcon },

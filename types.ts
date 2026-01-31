@@ -84,6 +84,7 @@ export interface Job {
   cost?: number;
   deadline: string; // ISO string date
   recordingDate?: string; // ISO string date and time
+  extraRecordingDates?: ExtraRecordingDate[]; // Novo campo para datas extras
   status: JobStatus;
   cloudLinks?: string[];
   createdAt: string;
@@ -102,12 +103,90 @@ export interface Job {
   isTeamJob?: boolean;
 }
 
+export interface ExtraRecordingDate {
+  id: string;
+  date: string; // ISO string
+  additionalValue: number; // Valor adicional
+  description?: string; // Descrição da data extra
+}
+
 export enum FinancialJobStatus {
   PENDING_DEPOSIT = 'PENDING_DEPOSIT',
   PARTIALLY_PAID = 'PARTIALLY_PAID',
   PENDING_FULL_PAYMENT = 'PENDING_FULL_PAYMENT',
   PAID = 'PAID',
   OVERDUE = 'OVERDUE'
+}
+
+// Proposal System Types
+export interface Proposal {
+  id: string;
+  title: string;
+  clientId: string;
+  jobId?: string;
+  content: ProposalContent;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected';
+  createdAt: string;
+  sentAt?: string;
+  acceptedAt?: string;
+  totalValue: number;
+  customizations?: ProposalCustomization;
+}
+
+export interface ProposalContent {
+  steps: ProposalStep[];
+  clientInfo: ClientInfo;
+  companyInfo: CompanyInfo;
+  terms: ProposalTerms;
+}
+
+export interface ProposalStep {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  duration?: string;
+  deliverables?: string[];
+}
+
+export interface ClientInfo {
+  name: string;
+  company?: string;
+  email: string;
+  phone?: string;
+}
+
+export interface CompanyInfo {
+  name: string;
+  email: string;
+  phone: string;
+  instagram: string;
+  website?: string;
+}
+
+export interface ProposalTerms {
+  paymentMethod: string;
+  revisions: number;
+  warranty: string;
+  deliveryFormat: string;
+}
+
+export interface ProposalCustomization {
+  colors: {
+    primary: string;
+    secondary: string;
+  };
+  logo?: string;
+  customMessage?: string;
+}
+
+export interface ProposalTemplate {
+  id: string;
+  name: string;
+  serviceType: ServiceType;
+  content: ProposalContent;
+  customizations: ProposalCustomization;
+  isDefault: boolean;
 }
 
 export interface User {

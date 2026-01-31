@@ -20,6 +20,7 @@ import CalendarPage from './pages/CalendarPage';
 import ArchivePage from './pages/ArchivePage';
 import DraftsPage from './pages/DraftsPage';
 import RestPage from './pages/RestPage';
+import ProposalsPage from './pages/ProposalsPage';
 import { useAppData } from './hooks/useAppData';
 import { useAuth } from './hooks/useAuth';
 import { Toaster } from 'react-hot-toast';
@@ -87,6 +88,7 @@ const MainLayout: React.FC = () => {
             <Route path="/communication" element={<CommunicationPage />} />
             <Route path="/ai-assistant" element={<AIAssistantPage />} />
             <Route path="/rest" element={<RestPage />} />
+            <Route path="/proposals" element={<ProposalsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

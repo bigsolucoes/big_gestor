@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, GenerateContentResponse, FunctionDeclaration, Schema, Type } from "@google/genai";
-import { Job, Client } from '../types';
+import { Job, Client, ProposalContent } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { getJobPaymentSummary } from '../utils/jobCalculations';
 
@@ -213,6 +213,95 @@ export const callGeminiApi = async (
 /**
  * Specifically generates a contract draft based on Job and Client data.
  */
+export const generateProposalContent = async (job: Job, client: Client): Promise<ProposalContent> => {
+    if (!ai) throw new Error("Não foi possível gerar a proposta. Verifique a configuração da API.");
+
+    const prompt = `
+Você é um especialista em propostas comerciais para freelancers e pequenas empresas. Crie uma proposta profissional baseada no site bigprodutora.com/proposta/ com as seguintes informações:
+
+CONTEXTO DO CLIENTE:
+- Nome: ${client.name}
+- Empresa: ${client.company || 'Não informado'}
+- Email: ${client.email}
+- Telefone: ${client.phone || 'Não informado'}
+
+DETALHES DO PROJETO:
+- Tipo de Serviço: ${job.serviceType}
+- Descrição: ${job.notes || 'Serviço profissional de ' + job.serviceType}
+- Valor: R$ ${job.value.toLocaleString('pt-BR')}
+- Prazo: ${new Date(job.deadline).toLocaleDateString('pt-BR')}
+- Data de Gravação: ${job.recordingDate ? new Date(job.recordingDate).toLocaleDateString('pt-BR') : 'A definir'}
+
+REGRAS:
+1. Baseie-se na estrutura do site bigprodutora.com/proposta/ (6 etapas)
+2. Adapte o conteúdo para o tipo de serviço: ${job.serviceType}
+3. Seja profissional mas acessível
+4. Inclua condições de pagamento claras
+5. Adapte as etapas conforme o serviço
+
+ESTRUTURA OBRIGATÓRIA (6 etapas):
+1. Fechamento - Pagamento, contrato, briefing
+2. Alinhamento - Esclarecimento de dúvidas, roteiro
+3. Produção - Pesquisa, criação, edição
+4. Apresentação - Envio para aprovação
+5. Alterações - Revisões gratuitas (limitadas)
+6. Entrega Final - Entrega em alta qualidade
+
+RETORNE APENAS JSON válido:
+{
+  "steps": [
+    {
+      "id": "1",
+      "number": 1,
+      "title": "Fechamento",
+      "description": "Descrição detalhada...",
+      "duration": "X dias",
+      "deliverables": ["item1", "item2"]
+    }
+  ],
+  "clientInfo": {
+    "name": "${client.name}",
+    "company": "${client.company || ''}",
+    "email": "${client.email}",
+    "phone": "${client.phone || ''}"
+  },
+  "companyInfo": {
+    "name": "BIG SOLUÇÕES",
+    "email": "sac@msolucoescriativas.com",
+    "phone": "(46) 98404-4021",
+    "instagram": "@bigsolucoes"
+  },
+  "terms": {
+    "paymentMethod": "50% na contratação, 50% na entrega",
+    "revisions": 3,
+    "warranty": "30 dias",
+    "deliveryFormat": "Digital em nuvem"
+  }
+}
+`;
+
+    try {
+        await waitForRateLimit();
+        
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: prompt,
+        });
+        
+        const text = response.text || '{}';
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        } else {
+            throw new Error("Não foi possível parsear o JSON da proposta");
+        }
+    } catch (error) {
+        console.error("Error generating proposal", error);
+        throw new Error("Erro ao gerar proposta via IA.");
+    }
+};
+
 export const generateContractContent = async (job: Job, client: Client): Promise<string> => {
     if (!ai) return "Erro: API Key não configurada.";
 
@@ -225,12 +314,11 @@ export const generateContractContent = async (job: Job, client: Client): Promise
     CPF/CNPJ: ${client.cpf || '__________________'}
     Email: ${client.email}
     
-    DADOS DO PROJETO (JOB):
-    Título: ${job.name}
-    Tipo de Serviço: ${job.serviceType}
-    Valor Total: ${formatCurrency(job.value, false)}
-    Prazo de Entrega: ${new Date(job.deadline).toLocaleDateString('pt-BR')}
-    Detalhes/Observações: ${job.notes || 'N/A'}
+    DADOS DO SERVIÇO:
+    Tipo: ${job.serviceType}
+    Descrição: ${job.notes || 'Serviços profissionais de ' + job.serviceType}
+    Valor: R$ ${job.value.toLocaleString('pt-BR')}
+    Prazo: ${new Date(job.deadline).toLocaleDateString('pt-BR')}
     
     INSTRUÇÕES:
     - Crie um contrato formal e completo.
