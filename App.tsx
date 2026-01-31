@@ -193,3 +193,11 @@ const AppRouter: React.FC = () => {
 };
 
 export default App;
+
+
+import { HashRouter } from 'react-router-dom';
+
+// Envolva seu App assim:
+<HashRouter>
+  <App />
+</HashRouter>
