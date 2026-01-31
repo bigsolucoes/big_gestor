@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { JobStatus, ServiceType } from './types';
+import logobig from './logobig.png';
 import { 
   Home, Briefcase, Users, CreditCard, BarChartBig, MessageCircle, FolderArchive, 
   Sparkles, Cog, PlusCircle, X, Trash2, Edit3, CheckCircle, AlertCircle, Clock, 

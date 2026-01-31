@@ -332,19 +332,65 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const importData = async (jsonString: string): Promise<boolean> => {
     try {
-      const data = JSON.parse(jsonString);
+      const parsed = JSON.parse(jsonString);
+      
+      // Handle legacy data wrapped in top-level 'data' property
+      let data = parsed;
+      if (parsed.data && (parsed.data.jobs || parsed.data.clients)) {
+        data = parsed.data;
+      }
+      
       if (data.jobs && data.clients) {
-        setJobs(data.jobs);
-        setClients(data.clients);
-        setContracts(data.contracts || []);
-        setDraftNotes(data.draftNotes || []);
+        // Sanitize and migrate legacy data
+        const sanitizedJobs = (data.jobs || []).map(job => ({
+          ...job,
+          linkedDraftIds: job.linkedDraftIds || [],
+          cloudLinks: job.cloudLinks || [],
+          cost: job.cost || 0,
+          isRecurring: job.isRecurring || false,
+          createCalendarEvent: job.createCalendarEvent || false,
+          isTeamJob: job.isTeamJob || false,
+          observationsLog: job.observationsLog || [],
+          payments: job.payments || [],
+          tasks: job.tasks || [],
+          financialTasks: job.financialTasks || [],
+          isDeleted: job.isDeleted ?? false,
+          ownerId: job.ownerId || currentUser?.id || 'imported',
+          ownerUsername: job.ownerUsername || currentUser?.username || 'imported'
+        }));
+        
+        const sanitizedClients = (data.clients || []).map(client => ({
+          ...client,
+          cpf: client.cpf || null,
+          observations: client.observations || ''
+        }));
+        
+        const sanitizedContracts = (data.contracts || []).map(contract => ({
+          ...contract,
+          isSigned: contract.isSigned ?? false,
+          duration: contract.duration || 'Pontual',
+          ownerId: contract.ownerId || currentUser?.id || 'imported',
+          ownerUsername: contract.ownerUsername || currentUser?.username || 'imported'
+        }));
+        
+        const sanitizedDrafts = (data.draftNotes || []).map(draft => ({
+          ...draft,
+          scriptLines: draft.scriptLines || [],
+          attachments: draft.attachments || [],
+          updatedAt: draft.updatedAt || draft.createdAt || new Date().toISOString()
+        }));
+        
+        setJobs(sanitizedJobs);
+        setClients(sanitizedClients);
+        setContracts(sanitizedContracts);
+        setDraftNotes(sanitizedDrafts);
         setSettings(data.settings || defaultInitialSettings);
         
         await Promise.all([
-             saveData('jobs', data.jobs),
-             saveData('clients', data.clients),
-             saveData('contracts', data.contracts || []),
-             saveData('drafts', data.draftNotes || []),
+             saveData('jobs', sanitizedJobs),
+             saveData('clients', sanitizedClients),
+             saveData('contracts', sanitizedContracts),
+             saveData('drafts', sanitizedDrafts),
              saveData('settings', data.settings || defaultInitialSettings)
         ]);
 
