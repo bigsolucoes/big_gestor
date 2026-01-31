@@ -9,19 +9,23 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "^1.6.0",
+    "@supabase/supabase-js": "^2.44.4",
+    "lucide-react": "^0.400.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.2",
     "react-hot-toast": "^2.5.2",
-    "uuid": "^11.1.0",
+    "react-router-dom": "^7.6.2",
     "recharts": "^3.0.0",
-    "@google/genai": "^1.6.0",
-    "lucide-react": "^0.400.0",
-    "@supabase/supabase-js": "^2.44.4"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

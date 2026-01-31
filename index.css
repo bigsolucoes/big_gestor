@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+    font-family: 'Robuck Regular';
+    src: url('https://db.onlinewebfonts.com/t/3d94949602e19c63a7597950c0c242e8.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@layer utilities {
+  .animate-modalShow {
+    animation: modalShow 0.3s ease-out forwards;
+  }
+  .animate-slowPulse {
+    animation: slowPulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .animate-shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  }
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+      display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+  }
+}
+
+@keyframes modalShow {
+  0% {
+    opacity: 0;
+    transform: translateY(-1rem) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slowPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%, 50%, 70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%, 60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
+/* --- THEME COLORS --- */
+body {
+    /* Light Theme (Default) */
+    --color-main-bg: #FFFFFF;
+    --color-card-bg: #FFFFFF;
+    --color-subtle-bg: #F8F9FA;      /* For subtle backgrounds like table rows, form sections */
+    --color-highlight-bg: #F1F5F9;   /* For slightly more highlighted elements, like Kanban cols, active filters */
+    --color-hover-bg: #F1F5F9;       /* For hover states */
+    --color-text-primary: #0F172A;   /* slate-900 */
+    --color-text-secondary: #64748B; /* slate-500 */
+    --color-border-color: #E2E8F0;   /* slate-200 */
+    --color-accent-manual: #1e293b; /* slate-800, kept for splash screen text */
+}
+
+body.dark-theme {
+    /* Dark Theme */
+    --color-main-bg: #121212;
+    --color-card-bg: #1E1E1E;
+    --color-subtle-bg: #2A2A2A;      
+    --color-highlight-bg: #333333;   
+    --color-hover-bg: #3A3A3A;       
+    --color-text-primary: #EAEAEA;
+    --color-text-secondary: #A0A0A0;
+    --color-border-color: #3A3A3A;
+    --color-accent-manual: #1e293b; 
+}
+
+/* --- Dynamic Accent Color --- */
+body {
+    --color-accent: #1e293b; /* slate-800 (default) */
+    --color-input-focus-border: var(--color-accent);
+}
+
+/* Utility classes to be used in Tailwind */
+.bg-main-bg { background-color: var(--color-main-bg); }
+.bg-card-bg { background-color: var(--color-card-bg); }
+.bg-subtle-bg { background-color: var(--color-subtle-bg); }
+.bg-highlight-bg { background-color: var(--color-highlight-bg); }
+.bg-hover-bg { background-color: var(--color-hover-bg); } /* Used for hover state */
+
+.text-text-primary { color: var(--color-text-primary); }
+.text-text-secondary { color: var(--color-text-secondary); }
+.text-accent { color: var(--color-accent); }
+.bg-accent { background-color: var(--color-accent); }
+
+.border-border-color { border-color: var(--color-border-color); }
+.ring-accent { --tw-ring-color: var(--color-accent); }
+
+.hover\:bg-hover-bg:hover { background-color: var(--color-hover-bg); }
+.hover\:text-accent:hover { color: var(--color-accent); }
+
+/* Mappings for old class names to new variables */
+.bg-custom-brown { background-color: var(--color-accent); }
+.text-custom-brown { color: var(--color-accent); }
+.focus\:ring-custom-brown:focus { --tw-ring-color: var(--color-accent); }
+.focus\:border-custom-brown:focus { border-color: var(--color-input-focus-border); }
+
+/* Logo Theme Switching */
+.logo-light { display: block; }
+.logo-dark { display: none; }
+body.dark-theme .logo-light { display: none; }
+body.dark-theme .logo-dark { display: block; }
+
+@media print {
+  .no-print, header, .w-64 { display: none !important; }
+  main { padding: 1rem !important; overflow: visible !important; }
+  .printable-container { padding: 0 !important; }
+  .printable-area { box-shadow: none !important; border: none !important; }
+  @page { size: A4; margin: 1cm; }
+}
