@@ -28,6 +28,7 @@ import BrandingSplashScreen from './components/BrandingSplashScreen';
 import { isPersistenceEnabled } from './services/blobStorageService';
 import { ExclamationCircleIcon } from './constants';
 import { useNotifications } from './hooks/useNotifications';
+import ConnectionWarning from './components/ConnectionWarning';
 
 const PersistenceWarningBanner: React.FC = () => {
   if (isPersistenceEnabled) {
@@ -182,6 +183,7 @@ const AppRouter: React.FC = () => {
   return (
     <>
       {showBrandingSplash && <BrandingSplashScreen isFadingOut={appPhase === 'fading'} />}
+      <ConnectionWarning />
        <div className={`transition-opacity duration-500 ease-in-out ${appContentVisible ? 'opacity-100' : 'opacity-0 pointer-events-none fixed inset-0'}`}>
         <Routes>
           <Route element={<ProtectedRoute />}>

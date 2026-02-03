@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 1. Supabase Mode
+    // Online-only authentication
     if (supabase && isPersistenceEnabled) {
         const { data: authStateListener } = supabase.auth.onAuthStateChange((_event, session) => {
           const supabaseUser = session?.user;
@@ -48,12 +48,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           authStateListener?.subscription.unsubscribe();
         };
     } else {
-        // 2. Offline/Demo Mode
-        // Check if there is a 'mock' session in localStorage
-        const storedUser = localStorage.getItem('big_offline_user_session');
-        if (storedUser) {
-            setCurrentUser(JSON.parse(storedUser));
-        }
+        // No offline mode - show connection error
+        setCurrentUser(null);
         setLoading(false);
     }
   }, []);
@@ -80,50 +76,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = useCallback(async (emailOrUsername: string, pass: string): Promise<string | null> => {
-    // --- OFFLINE / DEMO LOGIN LOGIC ---
-    if (!supabase) {
-        // Allow the specific user credentials mentioned
-        // Also allow generic admin/admin for easy testing
-        // Also allow universal master keys
-        if (
-            (emailOrUsername.toLowerCase() === 'luizmellol' && pass === 'big123') ||
-            (emailOrUsername.toLowerCase() === 'admin' && pass === 'admin') ||
-            (emailOrUsername.toLowerCase() === 'master' && pass === 'master') ||
-            (emailOrUsername.toLowerCase() === 'biggestor' && pass === 'biggestor') ||
-            (emailOrUsername.toLowerCase() === 'demo' && pass === 'demo')
-        ) {
-            const mockUser: User = {
-                id: emailOrUsername.toLowerCase() === 'luizmellol' ? 'user-luiz-id' : 'user-admin-id',
-                username: emailOrUsername,
-                email: emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@demo.com`
-            };
-            
-            // Check license for offline mock users if applicable (though usually manual in code)
-            const licenseError = await checkLicenseValidity(mockUser.username);
-            if (licenseError) return licenseError;
-
-            setCurrentUser(mockUser);
-            localStorage.setItem('big_offline_user_session', JSON.stringify(mockUser));
-            return null;
-        }
-        
-        // Also allow login if the user was "registered" locally
-        const localUsers = await blobService.get<any[]>(SYSTEM_USER_ID, 'offline_users') || [];
-        const found = localUsers.find(u => (u.username === emailOrUsername || u.email === emailOrUsername) && u.password === pass);
-        if (found) {
-             const licenseError = await checkLicenseValidity(found.username);
-             if (licenseError) return licenseError;
-
-             const mockUser: User = { id: found.id, username: found.username, email: found.email };
-             setCurrentUser(mockUser);
-             localStorage.setItem('big_offline_user_session', JSON.stringify(mockUser));
-             return null;
-        }
-
-        return "Usuário offline não encontrado ou senha incorreta (Tente: luizmellol / big123)";
+    // Online-only login - no offline fallback
+    if (!supabase || !isPersistenceEnabled) {
+        return "Sistema indisponível. Verifique sua conexão com a internet.";
     }
 
-    // --- SUPABASE LOGIN LOGIC ---
+    // --- ONLINE LOGIN LOGIC ---
     let email = emailOrUsername;
     let targetUsername = '';
 
@@ -168,23 +126,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = useCallback(async (username: string, email: string, pass:string, licenseKey: string): Promise<string | null> => {
     
-    // --- OFFLINE / DEMO REGISTER LOGIC ---
-    if (!supabase) {
-        const newUser = { id: `user-${Date.now()}`, username, email, password: pass };
-        const localUsers = await blobService.get<any[]>(SYSTEM_USER_ID, 'offline_users') || [];
-        
-        if (localUsers.find(u => u.username === username)) return "Usuário já existe.";
-        
-        await blobService.set(SYSTEM_USER_ID, 'offline_users', [...localUsers, newUser]);
-        
-        // Auto login
-        const userObj: User = { id: newUser.id, username, email };
-        setCurrentUser(userObj);
-        localStorage.setItem('big_offline_user_session', JSON.stringify(userObj));
-        return null;
+    // Online-only registration
+    if (!supabase || !isPersistenceEnabled) {
+        return "Sistema indisponível. Verifique sua conexão com a internet.";
     }
 
-    // --- SUPABASE REGISTER LOGIC ---
+    // --- ONLINE REGISTER LOGIC ---
     // 1. License Check
     const licenses = await blobService.get<License[]>(SYSTEM_USER_ID, 'licenses') || [];
     const validLicense = licenses.find(l => l.key === licenseKey && l.status === 'active');
@@ -245,8 +192,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const logout = useCallback(async () => {
-    localStorage.removeItem('big_offline_user_session');
-    
     if (supabase) {
         await supabase.auth.signOut();
     }
@@ -259,8 +204,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const changePassword = useCallback(async (oldPass: string, newPass: string): Promise<string | null> => {
     if (!currentUser) return "Não autenticado";
     
-    if (!supabase) {
-        return "Alteração de senha não disponível no modo Offline.";
+    if (!supabase || !isPersistenceEnabled) {
+        return "Alteração de senha não disponível. Verifique sua conexão com a internet.";
     }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
