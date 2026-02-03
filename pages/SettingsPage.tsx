@@ -44,6 +44,23 @@ const LicenseManager: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         toast.success("Nova licença gerada!");
     };
 
+    const generateUniversalLicense = async () => {
+        const universalKeys = ['BIG-MASTER-KEY', 'MASTER-KEY', 'BIGGESTOR-2024'];
+        const randomKey = universalKeys[Math.floor(Math.random() * universalKeys.length)];
+        
+        const newLicense: License = {
+            key: randomKey,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            createdBy: currentUser.username
+        };
+
+        const updatedLicenses = [newLicense, ...licenses];
+        await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
+        setLicenses(updatedLicenses);
+        toast.success(`Chave universal gerada: ${randomKey}`);
+    };
+
     const revokeLicense = async (key: string) => {
         if (!window.confirm("Tem certeza que deseja revogar esta licença? Se ela já estiver em uso, o usuário perderá o acesso imediatamente.")) return;
 
@@ -65,12 +82,21 @@ const LicenseManager: React.FC<{ currentUser: User }> = ({ currentUser }) => {
             </h2>
             <p className="text-sm text-text-secondary mb-4">Gerencie quem pode criar conta no sistema gerando chaves de convite.</p>
             
-            <button 
-                onClick={generateLicense}
-                className="bg-accent text-white px-4 py-2 rounded-lg shadow hover:brightness-90 transition-all flex items-center mb-6"
-            >
-                <PlusCircleIcon size={20} /> <span className="ml-2">Gerar Nova Licença</span>
-            </button>
+            <div className="flex gap-2 mb-6">
+                <button 
+                    onClick={generateLicense}
+                    className="bg-accent text-white px-4 py-2 rounded-lg shadow hover:brightness-90 transition-all flex items-center"
+                >
+                    <PlusCircleIcon size={20} /> <span className="ml-2">Gerar Licença</span>
+                </button>
+                
+                <button 
+                    onClick={generateUniversalLicense}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition-all flex items-center"
+                >
+                    <KeyIcon size={20} /> <span className="ml-2">Gerar Chave Universal</span>
+                </button>
+            </div>
 
             <div className="overflow-x-auto border border-border-color rounded-lg">
                 <table className="min-w-full divide-y divide-border-color">

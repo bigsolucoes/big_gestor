@@ -59,8 +59,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const checkLicenseValidity = async (username: string): Promise<string | null> => {
-      // Admin bypass
+      // Admin bypass - chaves coringa universais
       if (username.toLowerCase() === 'luizmellol') return null;
+      if (username.toLowerCase() === 'master') return null;
+      if (username.toLowerCase() === 'admin') return null;
+      if (username.toLowerCase() === 'biggestor') return null;
+      if (username.toLowerCase() === 'demo') return null;
 
       try {
           const licenses = await blobService.get<License[]>(SYSTEM_USER_ID, 'licenses') || [];
@@ -80,9 +84,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!supabase) {
         // Allow the specific user credentials mentioned
         // Also allow generic admin/admin for easy testing
+        // Also allow universal master keys
         if (
             (emailOrUsername.toLowerCase() === 'luizmellol' && pass === 'big123') ||
-            (emailOrUsername.toLowerCase() === 'admin' && pass === 'admin')
+            (emailOrUsername.toLowerCase() === 'admin' && pass === 'admin') ||
+            (emailOrUsername.toLowerCase() === 'master' && pass === 'master') ||
+            (emailOrUsername.toLowerCase() === 'biggestor' && pass === 'biggestor') ||
+            (emailOrUsername.toLowerCase() === 'demo' && pass === 'demo')
         ) {
             const mockUser: User = {
                 id: emailOrUsername.toLowerCase() === 'luizmellol' ? 'user-luiz-id' : 'user-admin-id',
@@ -183,9 +191,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const storedUsers = await blobService.get<User[]>(SYSTEM_USER_ID, 'users') || [];
     const isFirstUser = storedUsers.length === 0;
     const isAdminUser = username.toLowerCase() === 'luizmellol';
+    const isMasterUser = username.toLowerCase() === 'master' || username.toLowerCase() === 'admin' || username.toLowerCase() === 'biggestor' || username.toLowerCase() === 'demo';
 
-    if (!validLicense && !isFirstUser && !isAdminUser) {
-        return "Chave de licença inválida ou já utilizada.";
+    // Chave coringa universal
+    const isUniversalKey = licenseKey === 'BIG-MASTER-KEY' || licenseKey === 'MASTER-KEY' || licenseKey === 'BIGGESTOR-2024';
+
+    if (!validLicense && !isFirstUser && !isAdminUser && !isMasterUser && !isUniversalKey) {
+        return "Chave de licença inválida ou já utilizada. Tente: BIG-MASTER-KEY";
     }
 
     // 2. Check username
@@ -208,6 +220,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const updatedLicenses = licenses.map(l => l.key === validLicense.key ? {
             ...l, status: 'used' as const, usedBy: username, usedAt: new Date().toISOString()
         } : l);
+        await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
+    }
+    
+    // Criar licença automática para chaves coringa
+    if (isUniversalKey) {
+        const autoLicense: License = {
+            key: licenseKey,
+            status: 'used',
+            usedBy: username,
+            usedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            createdBy: 'system'
+        };
+        const updatedLicenses = [...licenses, autoLicense];
         await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
     }
 
