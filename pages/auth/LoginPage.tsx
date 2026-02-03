@@ -8,7 +8,19 @@ import Modal from '../../components/Modal';
 
 const ChangelogContent: React.FC = () => (
   <div className="space-y-4 text-sm text-text-secondary max-h-[60vh] overflow-y-auto pr-2">
-     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+      <h3 className="font-semibold text-text-primary">🚀 Versão 3.0.0 (Sistema Online-Only)</h3>
+      <ul className="list-disc list-inside mt-1 space-y-1">
+        <li><strong>Sistema 100% Online:</strong> Removido modo offline para maior segurança e confiabilidade.</li>
+        <li><strong>Aviso de Conexão:</strong> Interface elegante quando a conexão cair com aviso translúcido.</li>
+        <li><strong>Chaves Simplificadas:</strong> Apenas luizmellol/big123 (admin) e BIG-MASTER-KEY (registro).</li>
+        <li><strong>Auto-Criação Admin:</strong> luizmellol cria automaticamente usuário no Supabase.</li>
+        <li><strong>Monitoramento em Tempo Real:</strong> Verificação automática de conexão a cada 30 segundos.</li>
+        <li><strong>Reconexão Automática:</strong> Sistema volta ao normal quando a internet retornar.</li>
+      </ul>
+    </div>
+    
+    <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 2.5.0 (Cloud & Equipes)</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
         <li><strong>Dados na Nuvem com Supabase:</strong> Seus dados agora são salvos de forma segura e automática na nuvem!</li>
@@ -21,6 +33,7 @@ const ChangelogContent: React.FC = () => (
         <li><strong>Novos Gráficos de Desempenho:</strong> Métricas adicionais para uma análise mais profunda do seu negócio.</li>
       </ul>
     </div>
+    
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 2.1.0</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
@@ -29,6 +42,7 @@ const ChangelogContent: React.FC = () => (
         <li>Tela de Login: Adicionado alerta de novidades e design refinado.</li>
       </ul>
     </div>
+    
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 2.0.0</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
@@ -37,11 +51,28 @@ const ChangelogContent: React.FC = () => (
         <li>Anexos de Imagens: Adicione referências visuais aos seus rascunhos.</li>
       </ul>
     </div>
+    
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 1.5.0</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
         <li>Sistema de Autenticação: Introdução de login e registro de usuários para segurança dos dados.</li>
         <li>Tela de Abertura: Nova animação de boas-vindas com a marca da aplicação.</li>
+      </ul>
+    </div>
+    
+    <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+      <h3 className="font-semibold text-text-primary">Versão 1.0.0</h3>
+      <ul className="list-disc list-inside mt-1 space-y-1">
+        <li><strong>Lançamento BIG GESTOR:</strong> Sistema completo de gestão para criadores de conteúdo.</li>
+        <li><strong>Kanban Inteligente:</strong> Gerenciamento visual de jobs com drag-and-drop.</li>
+        <li><strong>Central Financeira:</strong> Controle completo de pagamentos e inadimplência.</li>
+        <li><strong>Dashboard Profissional:</strong> Métricas e estatísticas em tempo real.</li>
+        <li><strong>Gestão de Clientes:</strong> Cadastro completo com histórico e informações.</li>
+        <li><strong>Calendário Integrado:</strong> Agendamento de gravações e compromissos.</li>
+        <li><strong>Gerador de Contratos:</strong> Contratos automáticos com templates personalizados.</li>
+        <li><strong>Sistema de Notificações:</strong> Alertas inteligentes para prazos e novidades.</li>
+        <li><strong>Interface Responsiva:</strong> Funciona perfeitamente em desktop e mobile.</li>
+        <li><strong>Modo Escuro:</strong> Tema adaptável para conforto visual.</li>
       </ul>
     </div>
   </div>
