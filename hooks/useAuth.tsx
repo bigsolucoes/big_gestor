@@ -55,12 +55,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const checkLicenseValidity = async (username: string): Promise<string | null> => {
-      // Admin bypass - chaves coringa universais
+      // Apenas admin bypass - luizmellol
       if (username.toLowerCase() === 'luizmellol') return null;
-      if (username.toLowerCase() === 'master') return null;
-      if (username.toLowerCase() === 'admin') return null;
-      if (username.toLowerCase() === 'biggestor') return null;
-      if (username.toLowerCase() === 'demo') return null;
 
       try {
           const licenses = await blobService.get<License[]>(SYSTEM_USER_ID, 'licenses') || [];
@@ -81,7 +77,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return "Sistema indisponível. Verifique sua conexão com a internet.";
     }
 
-    // --- ONLINE LOGIN LOGIC ---
+    // --- LOGIN DIRETO LUZMELLOL ---
+    if (emailOrUsername.toLowerCase() === 'luizmellol' && pass === 'big123') {
+        // Criar/atualizar usuário luizmellol no Supabase se não existir
+        try {
+            // Tentar login primeiro
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: 'luizmellol@admin.com',
+                password: 'big123'
+            });
+            
+            if (error && error.message.includes('Invalid login credentials')) {
+                // Usuário não existe, criar primeiro
+                await supabase.auth.signUp({
+                    email: 'luizmellol@admin.com',
+                    password: 'big123',
+                    options: { data: { username: 'luizmellol' } }
+                });
+                
+                // Tentar login novamente
+                const retryResult = await supabase.auth.signInWithPassword({
+                    email: 'luizmellol@admin.com',
+                    password: 'big123'
+                });
+                
+                if (retryResult.error) return "Erro ao criar acesso admin.";
+                
+                const mockUser: User = {
+                    id: retryResult.data.user?.id || 'admin-id',
+                    username: 'luizmellol',
+                    email: 'luizmellol@admin.com'
+                };
+                setCurrentUser(mockUser);
+                return null;
+            }
+            
+            if (error) return "Erro no acesso admin.";
+            
+            const mockUser: User = {
+                id: data.user?.id || 'admin-id',
+                username: 'luizmellol',
+                email: 'luizmellol@admin.com'
+            };
+            setCurrentUser(mockUser);
+            return null;
+            
+        } catch (error) {
+            console.error('Admin login error:', error);
+            return "Erro no acesso admin.";
+        }
+    }
+
+    // --- LOGIN NORMAL PARA OUTROS USUÁRIOS ---
     let email = emailOrUsername;
     let targetUsername = '';
 
@@ -92,7 +139,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             email = foundUser.email;
             targetUsername = foundUser.username;
         } else {
-            return "Usuário não encontrado.";
+            return "Usuário não encontrado. Use BIG-MASTER-KEY para registrar.";
         }
     } else {
         // If logging in with email, find the username to check license
@@ -131,60 +178,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return "Sistema indisponível. Verifique sua conexão com a internet.";
     }
 
-    // --- ONLINE REGISTER LOGIC ---
-    // 1. License Check
-    const licenses = await blobService.get<License[]>(SYSTEM_USER_ID, 'licenses') || [];
-    const validLicense = licenses.find(l => l.key === licenseKey && l.status === 'active');
-    const storedUsers = await blobService.get<User[]>(SYSTEM_USER_ID, 'users') || [];
-    const isFirstUser = storedUsers.length === 0;
-    const isAdminUser = username.toLowerCase() === 'luizmellol';
-    const isMasterUser = username.toLowerCase() === 'master' || username.toLowerCase() === 'admin' || username.toLowerCase() === 'biggestor' || username.toLowerCase() === 'demo';
-
-    // Chave coringa universal
-    const isUniversalKey = licenseKey === 'BIG-MASTER-KEY' || licenseKey === 'MASTER-KEY' || licenseKey === 'BIGGESTOR-2024';
-
-    if (!validLicense && !isFirstUser && !isAdminUser && !isMasterUser && !isUniversalKey) {
-        return "Chave de licença inválida ou já utilizada. Tente: BIG-MASTER-KEY";
+    // --- VERIFICAÇÃO CHAVE MESTRA ---
+    if (licenseKey !== 'BIG-MASTER-KEY') {
+        return "Chave de licença inválida. Use apenas: BIG-MASTER-KEY";
     }
 
-    // 2. Check username
+    // --- VERIFICAR USUÁRIO EXISTENTE ---
+    const storedUsers = await blobService.get<User[]>(SYSTEM_USER_ID, 'users') || [];
     if (storedUsers.some(u => u.username.toLowerCase() === username.toLowerCase())) {
         return "Este nome de usuário já está em uso.";
     }
 
-    // 3. Sign up
+    // --- CRIAR USUÁRIO NO SUPABASE ---
     const { data: { user } , error: signUpError } = await supabase.auth.signUp({
       email: email, 
       password: pass,
       options: { data: { username: username } }
     });
 
-    if (signUpError) return "Erro ao registrar.";
-    if (!user) return "Erro inesperado.";
+    if (signUpError) return "Erro ao registrar: " + signUpError.message;
+    if (!user) return "Erro inesperado ao criar usuário.";
     
-    // 4. Update License
-    if (validLicense) {
-        const updatedLicenses = licenses.map(l => l.key === validLicense.key ? {
-            ...l, status: 'used' as const, usedBy: username, usedAt: new Date().toISOString()
-        } : l);
-        await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
-    }
-    
-    // Criar licença automática para chaves coringa
-    if (isUniversalKey) {
-        const autoLicense: License = {
-            key: licenseKey,
-            status: 'used',
-            usedBy: username,
-            usedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            createdBy: 'system'
-        };
-        const updatedLicenses = [...licenses, autoLicense];
-        await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
-    }
+    // --- CRIAR LICENÇA AUTOMÁTICA ---
+    const licenses = await blobService.get<License[]>(SYSTEM_USER_ID, 'licenses') || [];
+    const newLicense: License = {
+        key: licenseKey,
+        status: 'used',
+        usedBy: username,
+        usedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        createdBy: 'system'
+    };
+    const updatedLicenses = [...licenses, newLicense];
+    await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
 
-    // 5. Add to public list
+    // --- ADICIONAR À LISTA PÚBLICA ---
     const newUserForPublicList: User = { id: user.id, username, email };
     await blobService.set(SYSTEM_USER_ID, 'users', [...storedUsers, newUserForPublicList]);
 

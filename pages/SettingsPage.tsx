@@ -45,11 +45,18 @@ const LicenseManager: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     };
 
     const generateUniversalLicense = async () => {
-        const universalKeys = ['BIG-MASTER-KEY', 'MASTER-KEY', 'BIGGESTOR-2024'];
-        const randomKey = universalKeys[Math.floor(Math.random() * universalKeys.length)];
+        // Apenas BIG-MASTER-KEY disponível
+        const masterKey = 'BIG-MASTER-KEY';
+        
+        // Verificar se já existe
+        const existingLicense = licenses.find(l => l.key === masterKey);
+        if (existingLicense) {
+            toast.error("Chave BIG-MASTER-KEY já existe!");
+            return;
+        }
         
         const newLicense: License = {
-            key: randomKey,
+            key: masterKey,
             status: 'active',
             createdAt: new Date().toISOString(),
             createdBy: currentUser.username
@@ -58,7 +65,7 @@ const LicenseManager: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         const updatedLicenses = [newLicense, ...licenses];
         await blobService.set(SYSTEM_USER_ID, 'licenses', updatedLicenses);
         setLicenses(updatedLicenses);
-        toast.success(`Chave universal gerada: ${randomKey}`);
+        toast.success(`Chave mestra gerada: ${masterKey}`);
     };
 
     const revokeLicense = async (key: string) => {
@@ -94,7 +101,7 @@ const LicenseManager: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                     onClick={generateUniversalLicense}
                     className="bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition-all flex items-center"
                 >
-                    <KeyIcon size={20} /> <span className="ml-2">Gerar Chave Universal</span>
+                    <KeyIcon size={20} /> <span className="ml-2">Gerar BIG-MASTER-KEY</span>
                 </button>
             </div>
 
