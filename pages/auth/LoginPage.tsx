@@ -13,41 +13,41 @@ const ChangelogContent: React.FC = () => (
       <ul className="list-disc list-inside mt-1 space-y-1">
         <li><strong>Sistema 100% Online:</strong> Removido modo offline para maior segurança e confiabilidade.</li>
         <li><strong>Aviso de Conexão:</strong> Interface elegante quando a conexão cair com aviso translúcido.</li>
-        <li><strong>Chaves Simplificadas:</strong> Apenas luizmellol/big123 (admin) e BIG-MASTER-KEY (registro).</li>
-        <li><strong>Auto-Criação Admin:</strong> luizmellol cria automaticamente usuário no Supabase.</li>
+        <li><strong>Chaves Simplificadas:</strong> Sistema de acesso simplificado e mais seguro.</li>
         <li><strong>Monitoramento em Tempo Real:</strong> Verificação automática de conexão a cada 30 segundos.</li>
         <li><strong>Reconexão Automática:</strong> Sistema volta ao normal quando a internet retornar.</li>
+        <li><strong>Melhorias de Segurança:</strong> Proteção aprimorada de dados e acesso.</li>
       </ul>
     </div>
     
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 2.5.0 (Cloud & Equipes)</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
-        <li><strong>Dados na Nuvem com Supabase:</strong> Seus dados agora são salvos de forma segura e automática na nuvem!</li>
+        <li><strong>Dados na Nuvem:</strong> Seus dados agora são salvos de forma segura e automática na nuvem!</li>
         <li><strong>Sistema de Equipes:</strong> Adicione membros e compartilhe informações.</li>
         <li><strong>Kanban de Equipe:</strong> Compartilhe jobs específicos com sua equipe para colaboração focada.</li>
-        <li><strong>Calendário de Gravações Compartilhado:</strong> Visualize a agenda de gravações de toda a equipe com cores para cada membro.</li>
+        <li><strong>Calendário Compartilhado:</strong> Visualize a agenda de gravações de toda a equipe.</li>
         <li><strong>Agendamento Avançado:</strong> Adicione data e hora de gravação aos jobs.</li>
-        <li><strong>Filtro Financeiro:</strong> Filtre a Central Financeira por status (inadimplentes, concluídos, em dia).</li>
-        <li><strong>Editor de Roteiro Interativo:</strong> Arraste e solte cenas para reordená-las com renumeração automática.</li>
-        <li><strong>Novos Gráficos de Desempenho:</strong> Métricas adicionais para uma análise mais profunda do seu negócio.</li>
+        <li><strong>Filtro Financeiro:</strong> Filtre a Central Financeira por status.</li>
+        <li><strong>Editor de Roteiro Interativo:</strong> Arraste e solte cenas para reordená-las.</li>
+        <li><strong>Novos Gráficos de Desempenho:</strong> Métricas adicionais para análise mais profunda.</li>
       </ul>
     </div>
     
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 2.1.0</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
-        <li>Interface Monocromática: O aplicativo agora usa um tema em tons de cinza para um visual mais sóbrio e focado. Cores são usadas para alertas.</li>
-        <li>Fonte Robuck: A identidade visual "BIG" foi atualizada com a nova fonte.</li>
-        <li>Tela de Login: Adicionado alerta de novidades e design refinado.</li>
+        <li>Interface Monocromática: Visual mais sóbrio e focado com tons de cinza.</li>
+        <li>Identidade Visual Atualizada: Nova fonte da marca BIG.</li>
+        <li>Tela de Login: Design refinado e melhor experiência.</li>
       </ul>
     </div>
     
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 2.0.0</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
-        <li>Novo Módulo de Rascunhos: Crie roteiros e anotações de texto diretamente no sistema.</li>
-        <li>Editor de Roteiro: Ferramenta para estruturar cenas, descrições e calcular a duração total do vídeo.</li>
+        <li>Novo Módulo de Rascunhos: Crie roteiros e anotações diretamente no sistema.</li>
+        <li>Editor de Roteiro: Estruture cenas e calcule duração total do vídeo.</li>
         <li>Anexos de Imagens: Adicione referências visuais aos seus rascunhos.</li>
       </ul>
     </div>
@@ -55,23 +55,23 @@ const ChangelogContent: React.FC = () => (
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 1.5.0</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
-        <li>Sistema de Autenticação: Introdução de login e registro de usuários para segurança dos dados.</li>
-        <li>Tela de Abertura: Nova animação de boas-vindas com a marca da aplicação.</li>
+        <li>Sistema de Autenticação: Login e registro para segurança dos dados.</li>
+        <li>Tela de Abertura: Nova animação de boas-vindas.</li>
       </ul>
     </div>
     
     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
       <h3 className="font-semibold text-text-primary">Versão 1.0.0</h3>
       <ul className="list-disc list-inside mt-1 space-y-1">
-        <li><strong>Lançamento BIG GESTOR:</strong> Sistema completo de gestão para criadores de conteúdo.</li>
-        <li><strong>Kanban Inteligente:</strong> Gerenciamento visual de jobs com drag-and-drop.</li>
-        <li><strong>Central Financeira:</strong> Controle completo de pagamentos e inadimplência.</li>
+        <li><strong>Lançamento BIG GESTOR:</strong> Sistema completo de gestão para criadores.</li>
+        <li><strong>Kanban Inteligente:</strong> Gerenciamento visual com drag-and-drop.</li>
+        <li><strong>Central Financeira:</strong> Controle de pagamentos e inadimplência.</li>
         <li><strong>Dashboard Profissional:</strong> Métricas e estatísticas em tempo real.</li>
-        <li><strong>Gestão de Clientes:</strong> Cadastro completo com histórico e informações.</li>
+        <li><strong>Gestão de Clientes:</strong> Cadastro completo com histórico.</li>
         <li><strong>Calendário Integrado:</strong> Agendamento de gravações e compromissos.</li>
-        <li><strong>Gerador de Contratos:</strong> Contratos automáticos com templates personalizados.</li>
-        <li><strong>Sistema de Notificações:</strong> Alertas inteligentes para prazos e novidades.</li>
-        <li><strong>Interface Responsiva:</strong> Funciona perfeitamente em desktop e mobile.</li>
+        <li><strong>Gerador de Contratos:</strong> Contratos automáticos com templates.</li>
+        <li><strong>Sistema de Notificações:</strong> Alertas inteligentes para prazos.</li>
+        <li><strong>Interface Responsiva:</strong> Funciona em desktop e mobile.</li>
         <li><strong>Modo Escuro:</strong> Tema adaptável para conforto visual.</li>
       </ul>
     </div>
