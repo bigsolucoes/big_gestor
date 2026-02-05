@@ -137,7 +137,6 @@ const JobsPage: React.FC = () => {
     if (!currentUser) return [];
     return jobs.filter(job => 
         !job.isDeleted && 
-        job.status !== JobStatus.PAID &&
         (job.ownerId === currentUser.id || job.isTeamJob === true)
     );
   }, [jobs, currentUser]);
