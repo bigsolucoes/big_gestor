@@ -135,10 +135,45 @@ const JobsPage: React.FC = () => {
 
   const filteredJobs = useMemo(() => {
     if (!currentUser) return [];
-    return jobs.filter(job => 
-        !job.isDeleted && 
-        (job.ownerId === currentUser.id || job.isTeamJob === true)
-    );
+    
+    console.log('🔍 Debug - Filtrando jobs:', {
+      totalJobs: jobs.length,
+      currentUserId: currentUser.id,
+      currentUserUsername: currentUser.username
+    });
+    
+    const filtered = jobs.filter(job => {
+      // Verificar se não está deletado
+      if (job.isDeleted) {
+        console.log(`❌ Job "${job.name}" excluído, não mostrando`);
+        return false;
+      }
+      
+      // Verificar propriedade por ID ou Username (fallback)
+      const isOwnerById = job.ownerId === currentUser.id;
+      const isOwnerByUsername = job.ownerUsername === currentUser.username;
+      const isTeamMember = job.isTeamJob === true;
+      
+      const shouldShow = isOwnerById || isOwnerByUsername || isTeamMember;
+      
+      if (!shouldShow) {
+        console.log(`❌ Job "${job.name}" não pertence ao usuário:`, {
+          jobOwnerId: job.ownerId,
+          jobOwnerUsername: job.ownerUsername,
+          isTeamJob: job.isTeamJob,
+          isOwnerById,
+          isOwnerByUsername,
+          isTeamMember
+        });
+      } else {
+        console.log(`✅ Job "${job.name}" será mostrado`);
+      }
+      
+      return shouldShow;
+    });
+    
+    console.log(`📊 Resultado: ${filtered.length} jobs serão mostrados de ${jobs.length} totais`);
+    return filtered;
   }, [jobs, currentUser]);
   
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, jobId: string) => {
