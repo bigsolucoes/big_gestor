@@ -86,6 +86,21 @@ const JobListTableView: React.FC<JobListTableViewProps> = ({ jobs, clients, curr
             {sortedJobs.length > 0 ? sortedJobs.map((job) => {
               const client = clients.find(c => c.id === job.clientId);
               const isOwner = job.ownerId && currentUser.id && job.ownerId === currentUser.id;
+              const isOwnerByUsername = job.ownerUsername === currentUser.username;
+              const isTeamMember = job.isTeamJob === true;
+              const canEdit = isOwner || isOwnerByUsername || isTeamMember;
+              
+              // Debug para verificar propriedade
+              console.log(`🔍 Debug Job "${job.name}":`, {
+                jobOwnerId: job.ownerId,
+                currentUserId: currentUser.id,
+                jobOwnerUsername: job.ownerUsername,
+                currentUserUsername: currentUser.username,
+                isOwner,
+                isOwnerByUsername,
+                isTeamMember,
+                canEdit
+              });
               const today = new Date(); today.setHours(0,0,0,0);
               let deadlineDate: Date | null = null;
               try {
@@ -117,8 +132,8 @@ const JobListTableView: React.FC<JobListTableViewProps> = ({ jobs, clients, curr
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button onClick={() => onEditJob(job)} className="text-slate-500 hover:text-accent p-1 disabled:opacity-30 disabled:cursor-not-allowed" title="Editar Job" disabled={!isOwner}><PencilIcon /></button>
-                    <button onClick={() => onDeleteJob(job.id)} className="text-slate-500 hover:text-red-500 p-1 disabled:opacity-30 disabled:cursor-not-allowed" title="Excluir Job" disabled={!isOwner}><TrashIcon /></button>
+                    <button onClick={() => onEditJob(job)} className="text-slate-500 hover:text-accent p-1 disabled:opacity-30 disabled:cursor-not-allowed" title="Editar Job" disabled={!canEdit}><PencilIcon /></button>
+                    <button onClick={() => onDeleteJob(job.id)} className="text-slate-500 hover:text-red-500 p-1 disabled:opacity-30 disabled:cursor-not-allowed" title="Excluir Job" disabled={!canEdit}><TrashIcon /></button>
                   </td>
                 </tr>
               );
