@@ -5,30 +5,55 @@ async function unblockBackupJobs() {
     try {
         console.log('🔓 Iniciando desbloqueio de jobs do backup...');
         
+        // Verificar se está no ambiente correto
+        if (typeof window === 'undefined') {
+            throw new Error('Ambiente de janela não encontrado. Execute no console do navegador.');
+        }
+        
         // Importar Supabase do contexto global da aplicação
         const { supabase } = window;
         if (!supabase) {
-            throw new Error('Supabase não encontrado. Certifique-se de estar na página da aplicação.');
+            throw new Error('Supabase não encontrado. Certifique-se de estar na página da aplicação BIG Gestor.');
         }
         
         // Verificar se o usuário está logado
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            throw new Error('Você precisa estar logado!');
+        if (authError) {
+            console.error('Erro de autenticação:', authError);
+            throw new Error(`Erro de autenticação: ${authError.message}`);
+        }
+        
+        if (!user) {
+            throw new Error('Usuário não está logado. Faça login primeiro.');
         }
 
         console.log(`✅ Usuário logado: ${user.email}`);
+        console.log(`🆔 User ID: ${user.id}`);
 
         // Importar blobService do contexto global
         const { blobService } = window;
         if (!blobService) {
-            throw new Error('blobService não encontrado. Certifique-se de estar na página da aplicação.');
+            throw new Error('blobService não encontrado. Certifique-se de estar na página da aplicação BIG Gestor.');
         }
 
+        console.log('🔍 Carregando jobs...');
+        
         // Carregar todos os jobs
         const jobsData = await blobService.get(user.id, 'jobs');
+        
+        console.log(`📊 Dados recebidos:`, jobsData);
 
-        if (!jobsData || jobsData.length === 0) {
+        if (!jobsData) {
+            console.log('ℹ️ Nenhum dado encontrado, criando array vazio...');
+            jobsData = [];
+        }
+        
+        if (!Array.isArray(jobsData)) {
+            console.log('⚠️ Dados não são array, convertendo...');
+            jobsData = [];
+        }
+
+        if (jobsData.length === 0) {
             console.log('ℹ️ Nenhum job encontrado para desbloquear.');
             alert('Nenhum job encontrado para desbloquear.');
             return;
@@ -38,17 +63,34 @@ async function unblockBackupJobs() {
 
         // Filtrar jobs que precisam ser corrigidos
         const jobsToFix = jobsData.filter(job => {
-            // Jobs que não pertencem ao usuário atual por ID ou username
-            const hasCorrectOwner = (
-                job.ownerId === user.id || 
-                job.ownerUsername === user.username ||
-                job.isTeamJob === true
-            );
-            
-            // Jobs que não estão deletados
-            const isActive = !job.isDeleted;
-            
-            return isActive && !hasCorrectOwner;
+            try {
+                // Jobs que não pertencem ao usuário atual por ID ou username
+                const hasCorrectOwner = (
+                    job.ownerId === user.id || 
+                    job.ownerUsername === user.username ||
+                    job.isTeamJob === true
+                );
+                
+                // Jobs que não estão deletados
+                const isActive = !job.isDeleted;
+                
+                const needsFix = isActive && !hasCorrectOwner;
+                
+                if (needsFix) {
+                    console.log(`🔍 Job que precisa de correção: ${job.name}`, {
+                        jobId: job.id,
+                        ownerId: job.ownerId,
+                        ownerUsername: job.ownerUsername,
+                        isTeamJob: job.isTeamJob,
+                        isDeleted: job.isDeleted
+                    });
+                }
+                
+                return needsFix;
+            } catch (error) {
+                console.error(`Erro ao processar job:`, job, error);
+                return false;
+            }
         });
 
         console.log(`🎯 ${jobsToFix.length} jobs precisam ser corrigidos...`);
@@ -78,6 +120,8 @@ async function unblockBackupJobs() {
             return job;
         });
 
+        console.log('💾 Salvando jobs corrigidos...');
+        
         // Salvar os jobs corrigidos
         await blobService.set(user.id, 'jobs', updatedJobs);
         console.log('✅ Jobs desbloqueados com sucesso!');
@@ -107,7 +151,20 @@ async function unblockBackupJobs() {
 
     } catch (error) {
         console.error('❌ Erro no desbloqueio:', error);
-        alert(`❌ Erro no desbloqueio: ${error.message}\n\nVerifique o console para mais detalhes.`);
+        console.error('Stack trace:', error.stack);
+        
+        let errorMessage = error.message;
+        
+        // Mensagens mais amigáveis
+        if (error.message.includes('Supabase não encontrado')) {
+            errorMessage = 'Você precisa estar na página do BIG Gestor para executar este script.';
+        } else if (error.message.includes('Usuário não está logado')) {
+            errorMessage = 'Faça login no BIG Gestor antes de executar este script.';
+        } else if (error.message.includes('blobService não encontrado')) {
+            errorMessage = 'Recarregue a página e tente novamente.';
+        }
+        
+        alert(`❌ Erro no desbloqueio: ${errorMessage}\n\nVerifique o console para mais detalhes.`);
         throw error;
     }
 }
