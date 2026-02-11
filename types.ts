@@ -52,6 +52,16 @@ export interface Payment {
   date: string; // ISO String
   method?: string;
   notes?: string;
+  annotations?: Annotation[];
+}
+
+export interface Annotation {
+  id: string;
+  text: string;
+  createdAt: string;
+  createdBy: string;
+  type: 'job' | 'financial';
+  parentId: string; // ID do job ou payment
 }
 
 export interface Task {
@@ -101,6 +111,7 @@ export interface Job {
   ownerId?: string;
   ownerUsername?: string;
   isTeamJob?: boolean;
+  annotations?: Annotation[];
 }
 
 export interface ExtraRecordingDate {

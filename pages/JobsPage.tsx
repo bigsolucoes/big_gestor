@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAppData } from '../hooks/useAppData';
-import { Job, JobStatus, Client, User } from '../types';
+import { Job, JobStatus, Client, User, Annotation } from '../types';
 import { getJobPaymentSummary } from '../utils/jobCalculations';
 import { 
     KANBAN_COLUMNS, PlusCircleIcon, BriefcaseIcon, 
@@ -19,6 +19,8 @@ import JobDetailsPanel from '../components/JobDetailsPanel';
 import TrashModal from '../components/modals/TrashModal'; 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import AnnotationsPanel from '../components/AnnotationsPanel';
+import AnnotationsButton from '../components/AnnotationsButton';
 
 const JobCard: React.FC<{ 
   job: Job; 
@@ -28,8 +30,11 @@ const JobCard: React.FC<{
   onDragStart: (e: React.DragEvent<HTMLDivElement>, jobId: string) => void;
   onArchive: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
-}> = ({ job, client, currentUser, onClick, onDragStart, onArchive, onDelete }) => {
+  onUpdateAnnotations?: (jobId: string, annotations: Annotation[]) => void;
+}> = ({ job, client, currentUser, onClick, onDragStart, onArchive, onDelete, onUpdateAnnotations }) => {
   const { settings } = useAppData();
+  const [showAnnotations, setShowAnnotations] = useState(false);
+  
   const today = new Date();
   today.setHours(0,0,0,0);
   const deadlineDate = new Date(job.deadline);
@@ -42,6 +47,13 @@ const JobCard: React.FC<{
 
   const completedTasks = job.tasks?.filter(t => t.isCompleted).length || 0;
   const totalTasks = job.tasks?.length || 0;
+  const annotationsCount = job.annotations?.length || 0;
+
+  const handleUpdateAnnotations = (annotations: Annotation[]) => {
+    if (onUpdateAnnotations) {
+      onUpdateAnnotations(job.id, annotations);
+    }
+  };
 
   return (
     <div 
@@ -66,6 +78,10 @@ const JobCard: React.FC<{
         >
           <TrashIcon size={18} />
         </button>
+        <AnnotationsButton
+          count={annotationsCount}
+          onClick={() => setShowAnnotations(true)}
+        />
       </div>
 
       <div className="flex-grow cursor-pointer" onClick={onClick}>
@@ -101,6 +117,17 @@ const JobCard: React.FC<{
               </div>
           )}
       </div>
+      
+      {/* Annotations Panel */}
+      <AnnotationsPanel
+        annotations={job.annotations || []}
+        currentUser={currentUser}
+        parentId={job.id}
+        type="job"
+        onUpdateAnnotations={handleUpdateAnnotations}
+        isOpen={showAnnotations}
+        onClose={() => setShowAnnotations(false)}
+      />
     </div>
   );
 };
@@ -255,6 +282,14 @@ const JobsPage: React.FC = () => {
       setEditingColumnId(null);
       setTempColumnTitle('');
   };
+
+  const handleUpdateJobAnnotations = (jobId: string, annotations: Annotation[]) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+      updateJob({ ...job, annotations });
+      toast.success('Anotações atualizadas!');
+    }
+  };
   
   if (loading || !currentUser) {
     return <div className="flex justify-center items-center h-full"><LoadingSpinner /></div>;
@@ -351,6 +386,7 @@ const JobsPage: React.FC = () => {
                         onDragStart={handleDragStart}
                         onArchive={(e) => { e.stopPropagation(); handleArchiveJob(job.id); }}
                         onDelete={(e) => { e.stopPropagation(); handleDeleteJob(job.id); }}
+                        onUpdateAnnotations={handleUpdateJobAnnotations}
                     />
                     ))}
                 </div>
