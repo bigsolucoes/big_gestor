@@ -5,6 +5,12 @@ async function updateLuizmellolJobsToBriefing() {
     try {
         console.log('🔄 Iniciando atualização de jobs do luizmellol...');
         
+        // Importar Supabase do contexto global da aplicação
+        const { supabase } = window;
+        if (!supabase) {
+            throw new Error('Supabase não encontrado. Certifique-se de estar na página da aplicação.');
+        }
+        
         // Verificar se o usuário está logado
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
@@ -12,6 +18,12 @@ async function updateLuizmellolJobsToBriefing() {
         }
 
         console.log(`✅ Usuário logado: ${user.email}`);
+
+        // Importar blobService do contexto global
+        const { blobService } = window;
+        if (!blobService) {
+            throw new Error('blobService não encontrado. Certifique-se de estar na página da aplicação.');
+        }
 
         // Carregar todos os jobs
         const jobsData = await blobService.get(user.id, 'jobs');
