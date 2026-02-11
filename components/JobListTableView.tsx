@@ -85,7 +85,7 @@ const JobListTableView: React.FC<JobListTableViewProps> = ({ jobs, clients, curr
           <tbody className="bg-card-bg divide-y divide-border-color">
             {sortedJobs.length > 0 ? sortedJobs.map((job) => {
               const client = clients.find(c => c.id === job.clientId);
-              const isOwner = job.ownerId === currentUser.id;
+              const isOwner = job.ownerId && currentUser.id && job.ownerId === currentUser.id;
               const today = new Date(); today.setHours(0,0,0,0);
               let deadlineDate: Date | null = null;
               try {
