@@ -14,10 +14,7 @@ async function updateLuizmellolJobsToBriefing() {
         console.log(`✅ Usuário logado: ${user.email}`);
 
         // Carregar todos os jobs
-        const { data: jobsData, error: jobsError } = await blobService.get(user.id, 'jobs');
-        if (jobsError) {
-            throw new Error('Erro ao carregar jobs: ' + jobsError.message);
-        }
+        const jobsData = await blobService.get(user.id, 'jobs');
 
         if (!jobsData || jobsData.length === 0) {
             console.log('ℹ️ Nenhum job encontrado para atualizar.');
