@@ -25,10 +25,30 @@ import { useAppData } from './hooks/useAppData';
 import { useAuth } from './hooks/useAuth';
 import { Toaster } from 'react-hot-toast';
 import BrandingSplashScreen from './components/BrandingSplashScreen';
-import { isPersistenceEnabled } from './services/blobStorageService';
+import { isPersistenceEnabled, supabase } from './services/blobStorageService';
 import { ExclamationCircleIcon } from './constants';
 import { useNotifications } from './hooks/useNotifications';
 import ConnectionWarning from './components/ConnectionWarning';
+
+// Expor serviços globalmente para scripts
+if (typeof window !== 'undefined') {
+  window.supabase = supabase;
+  window.blobService = {
+    get: async (userId: string, key: string) => {
+      const { get } = await import('./services/blobStorageService');
+      return get(userId, key);
+    },
+    set: async (userId: string, key: string, data: unknown) => {
+      const { set } = await import('./services/blobStorageService');
+      return set(userId, key, data);
+    },
+    del: async (userId: string, key: string) => {
+      const { del } = await import('./services/blobStorageService');
+      return del(userId, key);
+    }
+  };
+  console.log('✅ Serviços expostos globalmente: window.supabase e window.blobService');
+}
 
 const PersistenceWarningBanner: React.FC = () => {
   if (isPersistenceEnabled) {
