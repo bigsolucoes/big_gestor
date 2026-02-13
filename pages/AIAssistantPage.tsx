@@ -17,6 +17,9 @@ const AIAssistantPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
+  // Em manutenção - desabilitado temporariamente
+  const isUnderMaintenance = true;
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -28,19 +31,27 @@ const AIAssistantPage: React.FC = () => {
         setMessages([
             {
                 id: uuidv4(),
-                text: "Olá! Sou seu Gestor IA. Posso criar jobs, cadastrar clientes, redigir contratos e gerar roteiros para seus vídeos. Como posso ajudar?",
+                text: isUnderMaintenance 
+                    ? "🔧 **Gestor AI em Manutenção**\n\nO assistente está temporariamente desabilitado para manutenção.\n\nEstamos trabalhando para melhorar o serviço.\n\nTente novamente em algumas horas.\n\nAgradecemos sua compreensão! 🙏"
+                    : "Olá! Sou seu Gestor IA. Posso criar jobs, cadastrar clientes, redigir contratos e gerar roteiros para seus vídeos. Como posso ajudar?",
                 sender: 'ai',
                 timestamp: new Date().toISOString()
             }
         ]);
     }
-  }, [messages.length]);
+  }, [messages.length, isUnderMaintenance]);
 
   const handleSendMessage = async (e?: React.FormEvent, customText?: string) => {
     if (e) e.preventDefault();
     const textToSend = customText || input;
     
     if (!textToSend.trim() || isLoading) return;
+
+    // Bloquear envio durante manutenção
+    if (isUnderMaintenance) {
+      toast.error("Gestor AI em manutenção. Tente novamente mais tarde.");
+      return;
+    }
 
     const userMessageText = textToSend;
     const userMessage: AIChatMessageType = {
@@ -266,6 +277,22 @@ const AIAssistantPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] md:h-full bg-card-bg shadow-xl rounded-xl overflow-hidden border border-border-color">
+      {/* Banner de Manutenção */}
+      {isUnderMaintenance && (
+        <div className="bg-yellow-100 border-b-2 border-yellow-500 text-yellow-800 p-4 text-center">
+          <div className="flex items-center justify-center">
+            <SparklesIcon size={20} className="mr-2 animate-pulse" />
+            <span className="font-semibold">🔧 Gestor AI em Manutenção</span>
+          </div>
+          <p className="text-sm mt-2">
+            O assistente está temporariamente desabilitado para melhorias. 
+            Estamos trabalhando para otimizar o serviço e trazer uma experiência ainda melhor.
+          </p>
+          <p className="text-xs mt-1 text-yellow-600">
+            Tente novamente em algumas horas. Agradecemos sua compreensão! 🙏
+          </p>
+        </div>
+      )}
       <header className="p-4 border-b border-border-color bg-subtle-bg flex justify-between items-center">
         <h1 className="text-xl font-semibold text-text-primary flex items-center">
           <SparklesIcon size={22} className="text-accent" /> <span className="ml-2">Gestor IA</span>
@@ -318,14 +345,14 @@ const AIAssistantPage: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ex: Crie um roteiro..."
+            placeholder={isUnderMaintenance ? "Em manutenção..." : "Ex: Crie um roteiro..."}
             className="flex-grow p-3 border border-border-color rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-shadow bg-card-bg"
-            disabled={isLoading}
+            disabled={isLoading || isUnderMaintenance}
           />
           <button
             type="submit"
             className="bg-accent text-white p-3 rounded-lg shadow hover:bg-opacity-90 transition-colors disabled:opacity-50"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || !input.trim() || isUnderMaintenance}
           >
             <SendHorizonal size={24} />
           </button>
