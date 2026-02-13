@@ -3,19 +3,25 @@ import { Job, Client, ProposalContent } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { getJobPaymentSummary } from '../utils/jobCalculations';
 
-// The API key is read from the environment variable with correct prefix.
+// The API key is read from environment variable with correct prefix.
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+console.log('🔑 Gemini API Key:', API_KEY ? 'Presente' : 'Ausente');
+console.log('🔑 API Key Length:', API_KEY?.length || 0);
 
 if (!API_KEY) {
   console.warn("API_KEY for Gemini is not set. AI Assistant will not work. Please set it in your environment variables.");
+} else {
+  console.log('✅ API Key detectada, tentando inicializar Gemini...');
 }
 
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+console.log('🤖 Gemini AI inicializado:', ai ? 'Sim' : 'Não');
 const MODEL_NAME = 'gemini-1.5-flash';
 
 // Simple rate limiter to avoid quota exceeded
 let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between requests
+const MIN_REQUEST_INTERVAL = 60000; // 60 seconds between requests (aumentado devido à quota)
 
 const waitForRateLimit = async () => {
   const now = Date.now();
@@ -154,7 +160,12 @@ export const callGeminiApi = async (
   userQuery: string, 
   appContextData: AppContextData
 ): Promise<GenerateContentResponse> => {
+  console.log('🚀 Iniciando chamada Gemini API...');
+  console.log('📝 User Query:', userQuery);
+  console.log('📊 App Context Data:', appContextData ? 'Presente' : 'Ausente');
+  
   if (!ai) {
+    console.log('❌ AI não inicializado - retornando mock response');
     const mockResponse: GenerateContentResponse = {
       text: "Desculpe, o assistente de IA não está configurado corretamente (API Key ausente).",
       candidates: [],
@@ -162,6 +173,7 @@ export const callGeminiApi = async (
     return Promise.resolve(mockResponse); 
   }
 
+  console.log('✅ AI inicializado, continuando...');
   const dataContext = formatDataForPrompt(appContextData);
 
   const systemInstruction = `Você é um assistente de IA chamado "Gestor IA" para o sistema BIG.
@@ -181,9 +193,12 @@ export const callGeminiApi = async (
   const prompt = `${dataContext}\nSolicitação do Usuário: ${userQuery}`;
   
   try {
+    console.log('⏳ Aguardando rate limit (60s)...');
     // Wait for rate limit before making request
     await waitForRateLimit();
+    console.log('✅ Rate limit OK, fazendo chamada...');
     
+    console.log('📤 Enviando requisição para Gemini...');
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: prompt,
@@ -193,10 +208,23 @@ export const callGeminiApi = async (
       }
     });
     
+    console.log('📥 Resposta recebida do Gemini:', response);
+    console.log('📥 Candidates:', response.candidates);
+    console.log('📥 Text:', response.text);
+    
     return response;
 
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
+    console.error('❌ Error calling Gemini API:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Verificar se é erro de quota
+    if (error.message && error.message.includes('429')) {
+      console.log('📊 Erro de quota detectado - aguardando 60 segundos...');
+      await new Promise(resolve => setTimeout(resolve, 60000)); // Esperar 60 segundos
+    }
+    
     let errorMessage = "Ocorreu um erro ao contatar o assistente de IA.";
     if (error instanceof Error) {
         errorMessage += ` Detalhes: ${error.message}`;
