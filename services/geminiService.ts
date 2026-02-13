@@ -1,11 +1,10 @@
-
 import { GoogleGenAI, GenerateContentResponse, FunctionDeclaration, Schema, Type } from "@google/genai";
 import { Job, Client, ProposalContent } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { getJobPaymentSummary } from '../utils/jobCalculations';
 
-// The API key is read from the environment variable with the correct prefix.
-const API_KEY = process.env.API_KEY;
+// The API key is read from the environment variable with correct prefix.
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 if (!API_KEY) {
   console.warn("API_KEY for Gemini is not set. AI Assistant will not work. Please set it in your environment variables.");
