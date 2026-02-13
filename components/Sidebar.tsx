@@ -39,7 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const sidebarClasses = `
     fixed inset-y-0 left-0 z-50 w-64 bg-subtle-bg text-text-primary border-r border-border-color shadow-2xl transform transition-transform duration-300 ease-in-out
-    md:relative md:translate-x-0 md:shadow-none
+    md:relative md:translate-x-0 md:shadow-none md:inset-y-0
     ${isOpen ? 'translate-x-0' : '-translate-x-full'}
   `;
 

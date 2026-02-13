@@ -86,14 +86,15 @@ const MainLayout: React.FC = () => {
       className="flex flex-col h-screen bg-main-bg text-text-primary overflow-hidden" 
     >
       <PersistenceWarningBanner />
-      <Header 
-        notifications={notifications} 
-        markNotificationsAsRead={markAsRead} 
-        onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
-      />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto w-full">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header 
+            notifications={notifications} 
+            markNotificationsAsRead={markAsRead} 
+            onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+          />
+          <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto w-full">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -114,6 +115,7 @@ const MainLayout: React.FC = () => {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
+        </div>
       </div>
       <Toaster position="top-right" reverseOrder={false} />
     </div>

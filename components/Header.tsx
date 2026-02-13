@@ -51,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({ notifications, markNotificationsAsRead,
   }, [panelRef]);
 
   return (
-    <header className="bg-card-bg text-text-primary py-4 px-4 sm:px-8 shadow-md flex justify-between items-center h-20 sticky top-0 z-30 select-none">
+    <header className="bg-card-bg text-text-primary py-4 px-4 sm:px-8 shadow-md flex justify-between items-center h-20 sticky top-0 z-20 select-none">
       <div className="flex items-center">
         {/* Mobile Menu Button */}
         <button 
